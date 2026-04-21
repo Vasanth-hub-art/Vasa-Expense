@@ -12,7 +12,10 @@ app.secret_key = "secret123"
 
 # 🔥 IMPORTANT: Only initialize DB safely
 with app.app_context():
+    if __name__ == "__main__":
     init_db()
+    app.run()
+    
 
 # Register Blueprints
 app.register_blueprint(auth)
