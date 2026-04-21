@@ -10,20 +10,19 @@ from routes.api import api
 app = Flask(__name__)
 app.secret_key = "secret123"
 
-# 🔥 IMPORTANT: Only initialize DB safely
-with app.app_context():
-if __name__ == "__main__":
-     init_db()
-     app.run()
-    
 
-# Register Blueprints
+# ================= BLUEPRINT REGISTRATION =================
 app.register_blueprint(auth)
 app.register_blueprint(expenses)
 app.register_blueprint(admin)
 app.register_blueprint(api)
 
 
-# 🚀 Render entry point
+# ================= DB INIT (SAFE) =================
+with app.app_context():
+    init_db()
+
+
+# ================= RENDER ENTRY POINT =================
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run()
