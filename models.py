@@ -3,10 +3,16 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 from werkzeug.security import generate_password_hash
 
+
 # 🔗 DATABASE CONNECTION (POSTGRESQL)
 def get_db():
+    db_url = os.environ.get("DATABASE_URL")
+
+    if not db_url:
+        raise Exception("DATABASE_URL is not set in environment variables")
+
     conn = psycopg2.connect(
-        os.environ.get("DATABASE_URL"),
+        db_url,
         cursor_factory=RealDictCursor
     )
     return conn
@@ -19,41 +25,45 @@ def init_db():
 
     # ================= USERS =================
     cur.execute("""
-    CREATE TABLE IF NOT EXISTS users(
-        id SERIAL PRIMARY KEY,
-        username TEXT UNIQUE,
-        password TEXT,
-        role TEXT DEFAULT 'user'
-    )
+        CREATE TABLE IF NOT EXISTS users (
+            id SERIAL PRIMARY KEY,
+            username TEXT UNIQUE,
+            password TEXT,
+            role TEXT DEFAULT 'user'
+        )
     """)
 
     # ================= CATEGORIES =================
     cur.execute("""
-    CREATE TABLE IF NOT EXISTS categories(
-        id SERIAL PRIMARY KEY,
-        name TEXT UNIQUE,
-        type TEXT CHECK(type IN ('income','expense'))
-    )
+        CREATE TABLE IF NOT EXISTS categories (
+            id SERIAL PRIMARY KEY,
+            name TEXT UNIQUE,
+            type TEXT CHECK(type IN ('income','expense'))
+        )
     """)
 
     # ================= EXPENSES =================
     cur.execute("""
-    CREATE TABLE IF NOT EXISTS expenses(
-        id SERIAL PRIMARY KEY,
-        user_id INTEGER,
-        amount REAL,
-        category_id INTEGER,
-        date TEXT,
-        description TEXT
-    )
+        CREATE TABLE IF NOT EXISTS expenses (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER,
+            amount REAL,
+            category_id INTEGER,
+            date TEXT,
+            description TEXT
+        )
     """)
 
     # ================= ADMIN USER =================
-    cur.execute("SELECT * FROM users WHERE username=%s", ("admin",))
+    cur.execute(
+        "SELECT * FROM users WHERE username=%s",
+        ("admin",)
+    )
+
     if not cur.fetchone():
         cur.execute("""
-        INSERT INTO users(username,password,role)
-        VALUES (%s,%s,%s)
+            INSERT INTO users (username, password, role)
+            VALUES (%s, %s, %s)
         """, (
             "admin",
             generate_password_hash("admin123"),
@@ -62,17 +72,18 @@ def init_db():
 
     # ================= DEFAULT CATEGORIES =================
     cur.executemany("""
-    INSERT INTO categories(name,type)
-    VALUES (%s,%s)
-    ON CONFLICT (name) DO NOTHING
+        INSERT INTO categories (name, type)
+        VALUES (%s, %s)
+        ON CONFLICT (name) DO NOTHING
     """, [
-        ("Food","expense"),
-        ("Travel","expense"),
-        ("Shopping","expense"),
-        ("Bills","expense"),
-        ("Salary","income"),
-        ("Freelance","income")
+        ("Food", "expense"),
+        ("Travel", "expense"),
+        ("Shopping", "expense"),
+        ("Bills", "expense"),
+        ("Salary", "income"),
+        ("Freelance", "income")
     ])
 
     conn.commit()
+    cur.close()
     conn.close()
