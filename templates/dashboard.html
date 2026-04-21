@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="card">
+
+    <h2>💰 Dashboard</h2>
+
+    <!-- ➕ ADD EXPENSE FORM -->
+    <form method="POST" action="/add">
+
+        <input name="amount" placeholder="Amount" required>
+
+        <!-- ✅ CATEGORY DROPDOWN (FIXED) -->
+        <select name="category_id" required>
+            <option value="">Select Category</option>
+            {% for c in categories %}
+                <option value="{{ c['id'] }}">
+                    {{ c['name'] }} ({{ c['type'] }})
+                </option>
+            {% endfor %}
+        </select>
+
+        <input name="date" type="date" required>
+
+        <input name="description" placeholder="Description">
+
+        <button>Add Expense</button>
+    </form>
+
+</div>
+
+<!-- 📊 TABLE -->
+<table>
+    <tr>
+        <th>Amount</th>
+        <th>Category</th>
+        <th>Date</th>
+        <th>Action</th>
+    </tr>
+
+    {% for e in data %}
+    <tr>
+        <td data-label="Amount">{{ e['amount'] }}</td>
+
+        <!-- ✅ NOW COMES FROM JOIN QUERY -->
+        <td data-label="Category">{{ e['category'] }}</td>
+
+        <td data-label="Date">{{ e['date'] }}</td>
+
+        <td data-label="Action">
+            <a href="/edit/{{ e['id'] }}">Edit</a> |
+            <a href="/delete/{{ e['id'] }}">Delete</a>
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+
+{% endblock %}

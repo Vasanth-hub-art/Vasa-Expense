@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="home">
+
+    <h2>👨‍💼 Admin Dashboard</h2>
+
+    <!-- ================= USERS ================= -->
+    <h3>👤 Users</h3>
+
+    {% if users %}
+    <table>
+        <tr>
+            <th>ID</th>
+            <th>Username</th>
+        </tr>
+
+        {% for u in users %}
+        <tr>
+            <td>{{ u['id'] }}</td>
+            <td>{{ u['username'] }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% else %}
+        <p>No users found</p>
+    {% endif %}
+
+
+    <!-- ================= EXPENSES ================= -->
+    <h3>💰 Expense History</h3>
+
+    {% if expenses %}
+    <table>
+        <tr>
+            <th>User</th>
+            <th>Amount</th>
+            <th>Category</th>
+            <th>Date</th>
+            <th>Description</th>
+        </tr>
+
+        {% for e in expenses %}
+        <tr>
+            <td data-label="User">{{ e['username'] }}</td>
+            <td data-label="Amount">₹ {{ e['amount'] }}</td>
+            <td data-label="Category">{{ e['category'] }}</td>
+            <td data-label="Date">{{ e['date'] }}</td>
+            <td data-label="Description">
+                {{ e['description'] if e['description'] else '-' }}
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% else %}
+        <p>No expenses available</p>
+    {% endif %}
+
+</div>
+
+{% endblock %}

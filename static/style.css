@@ -1,0 +1,290 @@
+
+/* ================= GLOBAL ================= */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', sans-serif;
+}
+
+body {
+    background: linear-gradient(135deg, #0f172a, #1e293b);
+    color: #e2e8f0;
+    min-height: 100vh;
+}
+
+/* ================= NAVBAR ================= */
+.navbar {
+    position: sticky;
+    top: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(30, 41, 59, 0.85);
+    backdrop-filter: blur(12px);
+    padding: 12px 20px;
+    z-index: 1000;
+}
+
+.nav-left a {
+    margin-right: 15px;
+    color: #e2e8f0;
+    text-decoration: none;
+    transition: 0.3s;
+}
+
+.nav-left a:hover {
+    color: #38bdf8;
+}
+
+.logout-btn {
+    background: #ef4444;
+    padding: 6px 14px;
+    border-radius: 8px;
+    color: white;
+    text-decoration: none;
+    transition: 0.3s;
+}
+
+.logout-btn:hover {
+    background: #dc2626;
+}
+
+/* ================= HOME ================= */
+.home {
+    text-align: center;
+    margin-top: 100px;
+    padding: 20px;
+}
+
+.home h1 {
+    font-size: 42px;
+    margin-bottom: 15px;
+}
+
+.home p {
+    color: #94a3b8;
+    max-width: 600px;
+    margin: auto;
+    line-height: 1.5;
+}
+
+/* HOME BUTTONS */
+.home-buttons {
+    margin-top: 30px;
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.home-buttons a button {
+    width: 130px;
+    padding: 10px;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+    color: white;
+    font-size: 14px;
+    transition: 0.3s;
+}
+
+.home-buttons a button:hover {
+    transform: scale(1.05);
+}
+
+/* ================= CARD ================= */
+.card {
+    width: 340px;
+    margin: 60px auto;
+    padding: 25px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(15px);
+    box-shadow: 0 0 25px rgba(0,0,0,0.4);
+    text-align: center;
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from {opacity: 0; transform: translateY(20px);}
+    to {opacity: 1; transform: translateY(0);}
+}
+
+/* ================= FORM ================= */
+form {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+/* INPUT + SELECT (ALIGNED PERFECTLY) */
+input, select {
+    width: 85%;
+    max-width: 280px;
+    padding: 10px;
+
+    border-radius: 8px;
+    border: none;
+    outline: none;
+
+    background: #0f172a;
+    color: #e2e8f0;
+
+    text-align: center;
+    font-size: 14px;
+}
+
+/* SELECT SPECIAL EFFECT */
+select {
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+select:hover {
+    background: #1e293b;
+}
+
+select:focus {
+    box-shadow: 0 0 8px #38bdf8;
+}
+
+/* BUTTON */
+button {
+    width: auto;
+    min-width: 120px;
+    padding: 10px 18px;
+    background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+    border: none;
+    border-radius: 8px;
+    color: white;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+button:hover {
+    transform: scale(1.05);
+}
+
+/* ================= TABLE ================= */
+table {
+    width: 90%;
+    margin: 20px auto;
+    border-collapse: collapse;
+    background: rgba(255,255,255,0.05);
+    backdrop-filter: blur(10px);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+th, td {
+    padding: 12px;
+    text-align: center;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+th {
+    background: rgba(56, 189, 248, 0.2);
+}
+
+/* CATEGORY HIGHLIGHT */
+td[data-label="Category"] {
+    font-weight: bold;
+    color: #38bdf8;
+}
+
+/* ================= LOGIN CENTER ================= */
+.login-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 85vh;
+}
+
+/* ================= LINKS ================= */
+a {
+    color: #38bdf8;
+    text-decoration: none;
+}
+
+/* ================= ANALYTICS ================= */
+
+.filter {
+    margin-top: 15px;
+    padding: 8px;
+    border-radius: 6px;
+    background: #0f172a;
+    color: white;
+    border: none;
+}
+
+.chart-container {
+    width: 80%;
+    max-width: 500px;
+    margin: 25px auto;
+}
+
+.chart-container canvas {
+    width: 100% !important;
+    height: 300px !important;
+}
+
+/* ================= RESPONSIVE ================= */
+@media (max-width: 768px) {
+
+    .home h1 {
+        font-size: 28px;
+    }
+
+    .home-buttons {
+        flex-direction: column;
+        align-items: center;
+        gap: 15px;
+    }
+
+    .card {
+        width: 90%;
+    }
+
+    table {
+        width: 100%;
+        font-size: 13px;
+    }
+
+    .navbar {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    input, select {
+        width: 100%;
+    }
+}
+
+/* ================= LOGO ================= */
+.logo {
+    font-size: 20px;
+    font-weight: bold;
+    color: #38bdf8;
+    text-decoration: none;
+    margin-right: 20px;
+    letter-spacing: 0.5px;
+}
+
+.logo:hover {
+    color: #0ea5e9;
+}
+
+/* FIX NAV ALIGNMENT */
+.nav-left {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+/* REMOVE EXTRA SPACING FROM LINKS */
+.nav-left a {
+    margin-right: 0;   /* override old spacing */
+}

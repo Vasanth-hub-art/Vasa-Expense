@@ -1,0 +1,84 @@
+={% extends 'base.html' %}
+{% block content %}
+
+<div class="card">
+
+    <h2>📊 Analytics Dashboard</h2>
+
+    <!-- Filter -->
+    <select id="filter" class="filter">
+        <option value="day">Day</option>
+        <option value="week">Week</option>
+        <option value="month" selected>Month</option>
+        <option value="year">Year</option>
+    </select>
+
+    <!-- Chart -->
+    <div class="chart-container">
+        <canvas id="chart"></canvas>
+    </div>
+
+    <!-- No Data Message -->
+    <p id="noData" style="display:none; color:#94a3b8; margin-top:10px;">
+        No data available
+    </p>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+let chartInstance = null;
+
+function loadChart(){
+
+    fetch('/chart-data?filter=' + document.getElementById('filter').value)
+    .then(res => res.json())
+    .then(data => {
+
+        const ctx = document.getElementById('chart');
+        const noDataText = document.getElementById('noData');
+
+        // ❌ If no data
+        if (!data.categories || data.categories.length === 0) {
+            if (chartInstance) chartInstance.destroy();
+            noDataText.style.display = "block";
+            return;
+        }
+
+        noDataText.style.display = "none";
+
+        // 🔁 Destroy old chart
+        if (chartInstance) {
+            chartInstance.destroy();
+        }
+
+        // 🎯 Create chart
+        chartInstance = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: data.categories,
+                datasets: [{
+                    data: data.amounts
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+
+    })
+    .catch(err => {
+        console.log("Chart Error:", err);
+    });
+}
+
+// Load initially
+loadChart();
+
+// Reload on filter change
+document.getElementById('filter').onchange = loadChart;
+</script>
+
+{% endblock %}

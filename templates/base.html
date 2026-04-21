@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vasa Expense</title>
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+
+    <!-- ================= NAVBAR ================= -->
+    <nav class="navbar">
+
+        <!-- LEFT SIDE -->
+        <div class="nav-left">
+
+            <!-- ✅ LOGO / APP NAME -->
+            <a href="/" class="logo">💰 Vasa Expense</a>
+
+            {% if session.get('user_id') %}
+
+                {% if session.get('role') == 'admin' %}
+                    <!-- ADMIN ONLY -->
+                    <a href="/admin">Admin</a>
+                {% else %}
+                    <!-- USER ONLY -->
+                    <a href="/dashboard">Dashboard</a>
+                    <a href="/analytics">Analytics</a>
+                {% endif %}
+
+            {% else %}
+                <!-- NOT LOGGED IN -->
+                <a href="/login">Login</a>
+                <a href="/register">Register</a>
+            {% endif %}
+
+        </div>
+
+        <!-- RIGHT SIDE -->
+        <div class="nav-right">
+
+            {% if session.get('user_id') %}
+                <a href="/logout" class="logout-btn">Logout</a>
+            {% endif %}
+
+        </div>
+
+    </nav>
+
+    <!-- ================= CONTENT ================= -->
+    <div class="container">
+        {% block content %}{% endblock %}
+    </div>
+
+</body>
+
+</html>

@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="login-wrapper">
+
+    <div class="card">
+
+        <h2>Welcome Back 👋</h2>
+        <p style="color:#94a3b8; margin-bottom:15px;">
+            Login to your Expense Tracker
+        </p>
+
+        <!-- ✅ ERROR MESSAGE -->
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}
+            <p style="color:#f87171; margin-bottom:10px;">
+                {{ messages[0] }}
+            </p>
+          {% endif %}
+        {% endwith %}
+
+        <form method="POST" action="/login">
+
+            <input name="username"
+                   placeholder="Enter Username"
+                   required>
+
+            <input name="password"
+                   type="password"
+                   placeholder="Enter Password"
+                   required>
+
+            <button type="submit">Login</button>
+
+        </form>
+
+        <p style="margin-top:15px;">
+            Don't have an account?
+            <a href="/register">Register</a>
+        </p>
+
+    </div>
+
+</div>
+
+{% endblock %}
