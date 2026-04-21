@@ -1,23 +1,26 @@
-import sqlite3
+import os
+import psycopg2
+from psycopg2.extras import RealDictCursor
 from werkzeug.security import generate_password_hash
 
-
-# 🔗 DATABASE CONNECTION
+# 🔗 DATABASE CONNECTION (POSTGRESQL)
 def get_db():
-    conn = sqlite3.connect('database.db')
-    conn.row_factory = sqlite3.Row
+    conn = psycopg2.connect(
+        os.environ.get("DATABASE_URL"),
+        cursor_factory=RealDictCursor
+    )
     return conn
 
 
 # 🏗️ INITIALIZE DATABASE
 def init_db():
-    conn = sqlite3.connect('database.db')
+    conn = get_db()
     cur = conn.cursor()
 
     # ================= USERS =================
     cur.execute("""
     CREATE TABLE IF NOT EXISTS users(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         username TEXT UNIQUE,
         password TEXT,
         role TEXT DEFAULT 'user'
@@ -27,7 +30,7 @@ def init_db():
     # ================= CATEGORIES =================
     cur.execute("""
     CREATE TABLE IF NOT EXISTS categories(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         name TEXT UNIQUE,
         type TEXT CHECK(type IN ('income','expense'))
     )
@@ -36,23 +39,21 @@ def init_db():
     # ================= EXPENSES =================
     cur.execute("""
     CREATE TABLE IF NOT EXISTS expenses(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         user_id INTEGER,
         amount REAL,
         category_id INTEGER,
         date TEXT,
-        description TEXT,
-        FOREIGN KEY(user_id) REFERENCES users(id),
-        FOREIGN KEY(category_id) REFERENCES categories(id)
+        description TEXT
     )
     """)
 
     # ================= ADMIN USER =================
-    cur.execute("SELECT * FROM users WHERE username='admin'")
+    cur.execute("SELECT * FROM users WHERE username=%s", ("admin",))
     if not cur.fetchone():
         cur.execute("""
         INSERT INTO users(username,password,role)
-        VALUES (?,?,?)
+        VALUES (%s,%s,%s)
         """, (
             "admin",
             generate_password_hash("admin123"),
@@ -61,7 +62,9 @@ def init_db():
 
     # ================= DEFAULT CATEGORIES =================
     cur.executemany("""
-    INSERT OR IGNORE INTO categories(name,type) VALUES (?,?)
+    INSERT INTO categories(name,type)
+    VALUES (%s,%s)
+    ON CONFLICT (name) DO NOTHING
     """, [
         ("Food","expense"),
         ("Travel","expense"),
