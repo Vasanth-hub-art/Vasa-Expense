@@ -1,4 +1,5 @@
-from flask import Flask, redirect, session, os
+from flask import Flask, redirect, session
+import os
 
 from models import init_db
 from routes.auth import auth
@@ -8,6 +9,7 @@ from routes.api import api
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "secret123")
+
 
 # ================= BLUEPRINT REGISTRATION =================
 app.register_blueprint(auth)
@@ -39,7 +41,7 @@ def home():
     return redirect("/login")
 
 
-# ================= HEALTH CHECK (Render-friendly) =================
+# ================= HEALTH CHECK =================
 @app.route("/health")
 def health():
     return "OK", 200
