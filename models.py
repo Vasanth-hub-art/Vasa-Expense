@@ -17,7 +17,7 @@ def init_db():
     conn = get_db()
     cur = conn.cursor()
 
-    # ⚠️ RESET TABLES (ONLY FIRST DEPLOY)
+    # ⚠️ RESET TABLES (ONLY FIRST TIME SAFE)
     cur.execute("DROP TABLE IF EXISTS expenses CASCADE;")
     cur.execute("DROP TABLE IF EXISTS categories CASCADE;")
     cur.execute("DROP TABLE IF EXISTS users CASCADE;")
@@ -59,11 +59,7 @@ def init_db():
         cur.execute("""
             INSERT INTO users (username, password, role)
             VALUES (%s, %s, %s)
-        """, (
-            "admin",
-            generate_password_hash("admin123"),
-            "admin"
-        ))
+        """, ("admin", generate_password_hash("admin123"), "admin"))
 
     # DEFAULT CATEGORIES
     cur.executemany("""
