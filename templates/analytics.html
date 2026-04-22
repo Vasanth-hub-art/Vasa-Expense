@@ -5,12 +5,8 @@
 
     <h2>📊 Expense Analytics</h2>
 
-    <!-- 💰 TOTAL -->
-    <h3 style="margin-top:10px;">
-        💰 Total Expense: ₹ <span id="total">0</span>
-    </h3>
+    <h3>💰 Total Expense: ₹ <span id="total">0</span></h3>
 
-    <!-- FILTER -->
     <select id="filter" style="margin:10px 0; padding:8px;">
         <option value="day">Day</option>
         <option value="week">Week</option>
@@ -18,88 +14,83 @@
         <option value="year">Year</option>
     </select>
 
-    <!-- CHART -->
-    <div style="height:350px;">
+    <!-- ✅ IMPORTANT FIX: explicit height -->
+    <div style="position:relative; height:400px; width:100%;">
         <canvas id="chart"></canvas>
     </div>
 
-    <!-- NO DATA -->
     <p id="noData" style="display:none; color:gray;">
         No expense data available
     </p>
 
 </div>
 
-<!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
+
 let chart = null;
 
 function loadAnalytics() {
 
-    let filter = document.getElementById("filter").value;
+    const filter = document.getElementById("filter").value;
 
-    fetch("/analytics-data?filter=" + filter)
-    .then(res => res.json())
-    .then(data => {
+    fetch(`/analytics-data?filter=${filter}`)
+        .then(res => res.json())
+        .then(data => {
 
-        // 💰 update total
-        document.getElementById("total").innerText = data.total;
+            console.log("API DATA:", data); // 🔥 DEBUG
 
-        let ctx = document.getElementById("chart").getContext("2d");
+            document.getElementById("total").innerText = data.total || 0;
 
-        // ❌ no data
-        if (!data.categories || data.categories.length === 0) {
+            const ctx = document.getElementById("chart");
+
+            if (!data.categories || data.categories.length === 0) {
+
+                if (chart) chart.destroy();
+
+                document.getElementById("noData").style.display = "block";
+                return;
+            }
+
+            document.getElementById("noData").style.display = "none";
 
             if (chart) chart.destroy();
 
-            document.getElementById("noData").style.display = "block";
-            return;
-        }
+            chart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: data.categories,
+                    datasets: [{
+                        data: data.amounts,
+                        backgroundColor: [
+                            '#60a5fa',
+                            '#34d399',
+                            '#fbbf24',
+                            '#f87171',
+                            '#a78bfa',
+                            '#38bdf8'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
 
-        document.getElementById("noData").style.display = "none";
-
-        // 🔁 destroy old chart
-        if (chart) chart.destroy();
-
-        chart = new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                labels: data.categories,
-                datasets: [{
-                    data: data.amounts,
-                    backgroundColor: [
-                        '#60a5fa',
-                        '#34d399',
-                        '#fbbf24',
-                        '#f87171',
-                        '#a78bfa',
-                        '#38bdf8',
-                        '#fb7185',
-                        '#4ade80'
-                    ],
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                cutout: '60%'
-            }
+        })
+        .catch(err => {
+            console.error("Chart error:", err);
         });
-
-    })
-    .catch(err => {
-        console.log("Analytics error:", err);
-    });
 }
 
-// load initially
-loadAnalytics();
+// ✅ IMPORTANT: run after page fully loads
+window.onload = function () {
+    loadAnalytics();
 
-// filter change
-document.getElementById("filter").addEventListener("change", loadAnalytics);
+    document.getElementById("filter").addEventListener("change", loadAnalytics);
+};
 
 </script>
 
