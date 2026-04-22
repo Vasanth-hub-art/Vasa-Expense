@@ -2,42 +2,25 @@
 {% block content %}
 
 <div class="login-wrapper">
-
     <div class="card">
 
-        <h2>📝 Register</h2>
+        <h2>Register</h2>
 
-        <!-- ✅ ERROR / SUCCESS MESSAGE -->
         {% with messages = get_flashed_messages() %}
-          {% if messages %}
-            <p style="color:#f87171; margin-bottom:10px;">
-                {{ messages[0] }}
-            </p>
-          {% endif %}
+        {% if messages %}
+            <p style="color:red;">{{ messages[0] }}</p>
+        {% endif %}
         {% endwith %}
 
-        <form method="POST" action="/register">
-
-            <input name="username"
-                   placeholder="Create Username"
-                   required>
-
-            <input name="password"
-                   type="password"
-                   placeholder="Create Password"
-                   required>
-
-            <button type="submit">Register</button>
-
+        <form method="POST" action="{{ url_for('register') }}">
+            <input name="username" placeholder="Username" required>
+            <input name="password" type="password" placeholder="Password" required>
+            <button>Register</button>
         </form>
 
-        <p style="margin-top:15px;">
-            Already have an account?
-            <a href="/login">Login</a>
-        </p>
+        <p>Already have account? <a href="{{ url_for('login') }}">Login</a></p>
 
     </div>
-
 </div>
 
 {% endblock %}
