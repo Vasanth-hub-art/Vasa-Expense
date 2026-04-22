@@ -21,58 +21,44 @@ def init_db():
     conn = get_db()
     cur = conn.cursor()
 
-    # USERS
     cur.execute("""
-        CREATE TABLE IF NOT EXISTS users (
-            id SERIAL PRIMARY KEY,
-            username TEXT UNIQUE,
-            password TEXT,
-            role TEXT DEFAULT 'user'
-        )
+    CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        username TEXT UNIQUE,
+        password TEXT,
+        role TEXT DEFAULT 'user'
+    )
     """)
 
-    # CATEGORIES
     cur.execute("""
-        CREATE TABLE IF NOT EXISTS categories (
-            id SERIAL PRIMARY KEY,
-            name TEXT UNIQUE,
-            type TEXT
-        )
+    CREATE TABLE IF NOT EXISTS categories (
+        id SERIAL PRIMARY KEY,
+        name TEXT UNIQUE,
+        type TEXT
+    )
     """)
 
-    # EXPENSES
     cur.execute("""
-        CREATE TABLE IF NOT EXISTS expenses (
-            id SERIAL PRIMARY KEY,
-            user_id INTEGER,
-            amount REAL,
-            category_id INTEGER,
-            date TEXT,
-            description TEXT
-        )
+    CREATE TABLE IF NOT EXISTS expenses (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER,
+        amount REAL,
+        category_id INTEGER,
+        date TEXT,
+        description TEXT
+    )
     """)
 
-    # ================= DEFAULT CATEGORIES =================
+    # default categories (safe insert)
     cur.execute("SELECT COUNT(*) FROM categories")
-    count = cur.fetchone()["count"]
+    if cur.fetchone()["count"] == 0:
+        cur.execute("INSERT INTO categories (name,type) VALUES (%s,%s)", ("Food","expense"))
+        cur.execute("INSERT INTO categories (name,type) VALUES (%s,%s)", ("Travel","expense"))
+        cur.execute("INSERT INTO categories (name,type) VALUES (%s,%s)", ("Rent","expense"))
+        cur.execute("INSERT INTO categories (name,type) VALUES (%s,%s)", ("Salary","income"))
+        cur.execute("INSERT INTO categories (name,type) VALUES (%s,%s)", ("Shopping","expense"))
 
-    if count == 0:
-        default_categories = [
-            ("Food", "expense"),
-            ("Travel", "expense"),
-            ("Rent", "expense"),
-            ("Shopping", "expense"),
-            ("Bills", "expense"),
-            ("Others", "expense")
-        ]
-
-        for c in default_categories:
-            cur.execute(
-                "INSERT INTO categories (name, type) VALUES (%s, %s)",
-                c
-            )
-
-    # ADMIN
+    # admin user
     cur.execute("SELECT * FROM users WHERE username=%s", ("admin",))
     if not cur.fetchone():
         cur.execute(
@@ -106,7 +92,7 @@ def register():
 
         cur.execute("SELECT * FROM users WHERE username=%s", (username,))
         if cur.fetchone():
-            flash("Username already exists")
+            flash("Username already exists ❌")
             return redirect("/register")
 
         cur.execute(
@@ -132,11 +118,14 @@ def login():
         user = cur.fetchone()
 
         if not user or not check_password_hash(user["password"], request.form["password"]):
-            flash("Invalid credentials")
+            flash("Invalid credentials ❌")
             return redirect("/login")
 
         session["user_id"] = user["id"]
         session["role"] = user["role"]
+
+        if user["role"] == "admin":
+            return redirect("/admin")
 
         return redirect("/dashboard")
 
@@ -172,12 +161,17 @@ def dashboard():
     cur.execute("SELECT * FROM categories")
     categories = cur.fetchall()
 
-    return render_template("dashboard.html", data=data, categories=categories)
+    return render_template("dashboard.html",
+                           data=data,
+                           categories=categories)
 
 
 # ================= ADD EXPENSE =================
 @app.route("/add", methods=["POST"])
 def add():
+    if "user_id" not in session:
+        return redirect("/login")
+
     db = get_db()
     cur = db.cursor()
 
@@ -199,6 +193,9 @@ def add():
 # ================= DELETE =================
 @app.route("/delete/<int:id>")
 def delete(id):
+    if "user_id" not in session:
+        return redirect("/login")
+
     db = get_db()
     cur = db.cursor()
 
@@ -211,6 +208,9 @@ def delete(id):
 # ================= EDIT =================
 @app.route("/edit/<int:id>", methods=["GET", "POST"])
 def edit(id):
+    if "user_id" not in session:
+        return redirect("/login")
+
     db = get_db()
     cur = db.cursor()
 
@@ -239,7 +239,32 @@ def edit(id):
     return render_template("edit.html", e=e, categories=categories)
 
 
-# ================= ANALYTICS =================
+# ================= ADMIN =================
+@app.route("/admin")
+def admin():
+    if session.get("role") != "admin":
+        return redirect("/login")
+
+    db = get_db()
+    cur = db.cursor()
+
+    cur.execute("SELECT * FROM users")
+    users = cur.fetchall()
+
+    cur.execute("""
+        SELECT u.username, e.amount, c.name as category, e.date, e.description
+        FROM expenses e
+        JOIN users u ON u.id = e.user_id
+        JOIN categories c ON c.id = e.category_id
+    """)
+    expenses = cur.fetchall()
+
+    return render_template("admin.html",
+                           users=users,
+                           expenses=expenses)
+
+
+# ================= ANALYTICS PAGE =================
 @app.route("/analytics")
 def analytics():
     if "user_id" not in session:
@@ -248,31 +273,42 @@ def analytics():
     return render_template("analytics.html")
 
 
-# ================= CHART DATA (CATEGORY BASED) =================
-@app.route("/chart-data")
-def chart_data():
+# ================= ANALYTICS API =================
+@app.route("/analytics-data")
+def analytics_data():
     if "user_id" not in session:
-        return jsonify({"categories": [], "amounts": []})
+        return jsonify({"total": 0, "categories": [], "amounts": []})
 
     db = get_db()
     cur = db.cursor()
 
+    # TOTAL EXPENSE
     cur.execute("""
-        SELECT c.name, SUM(e.amount) as total
+        SELECT COALESCE(SUM(amount),0)
+        FROM expenses
+        WHERE user_id=%s
+    """, (session["user_id"],))
+    total = cur.fetchone()["coalesce"]
+
+    # CATEGORY WISE DATA
+    cur.execute("""
+        SELECT c.name, SUM(e.amount)
         FROM expenses e
         JOIN categories c ON c.id = e.category_id
         WHERE e.user_id=%s
         GROUP BY c.name
-        ORDER BY total DESC
+        ORDER BY SUM(e.amount) DESC
     """, (session["user_id"],))
 
     data = cur.fetchall()
 
     return jsonify({
+        "total": float(total),
         "categories": [row["name"] for row in data],
-        "amounts": [float(row["total"]) for row in data]
+        "amounts": [float(row["sum"]) for row in data]
     })
 
 
+# ================= RUN =================
 if __name__ == "__main__":
     app.run()
