@@ -3,7 +3,6 @@ import os
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "secret123")
@@ -22,42 +21,58 @@ def init_db():
     conn = get_db()
     cur = conn.cursor()
 
+    # USERS
     cur.execute("""
-    CREATE TABLE IF NOT EXISTS users (
-        id SERIAL PRIMARY KEY,
-        username TEXT UNIQUE,
-        password TEXT,
-        role TEXT DEFAULT 'user'
-    )
+        CREATE TABLE IF NOT EXISTS users (
+            id SERIAL PRIMARY KEY,
+            username TEXT UNIQUE,
+            password TEXT,
+            role TEXT DEFAULT 'user'
+        )
     """)
 
+    # CATEGORIES
     cur.execute("""
-    CREATE TABLE IF NOT EXISTS categories (
-        id SERIAL PRIMARY KEY,
-        name TEXT UNIQUE,
-        type TEXT
-    )
+        CREATE TABLE IF NOT EXISTS categories (
+            id SERIAL PRIMARY KEY,
+            name TEXT UNIQUE,
+            type TEXT
+        )
     """)
 
+    # EXPENSES
     cur.execute("""
-    CREATE TABLE IF NOT EXISTS expenses (
-        id SERIAL PRIMARY KEY,
-        user_id INTEGER,
-        amount REAL,
-        category_id INTEGER,
-        date TEXT,
-        description TEXT
-    )
+        CREATE TABLE IF NOT EXISTS expenses (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER,
+            amount REAL,
+            category_id INTEGER,
+            date TEXT,
+            description TEXT
+        )
     """)
 
-    # default categories
+    # ================= DEFAULT CATEGORIES =================
     cur.execute("SELECT COUNT(*) FROM categories")
-    if cur.fetchone()["count"] == 0:
-        cur.execute("INSERT INTO categories (name,type) VALUES (%s,%s)", ("Food","expense"))
-        cur.execute("INSERT INTO categories (name,type) VALUES (%s,%s)", ("Travel","expense"))
-        cur.execute("INSERT INTO categories (name,type) VALUES (%s,%s)", ("Salary","income"))
+    count = cur.fetchone()["count"]
 
-    # admin
+    if count == 0:
+        default_categories = [
+            ("Food", "expense"),
+            ("Travel", "expense"),
+            ("Rent", "expense"),
+            ("Shopping", "expense"),
+            ("Bills", "expense"),
+            ("Others", "expense")
+        ]
+
+        for c in default_categories:
+            cur.execute(
+                "INSERT INTO categories (name, type) VALUES (%s, %s)",
+                c
+            )
+
+    # ADMIN
     cur.execute("SELECT * FROM users WHERE username=%s", ("admin",))
     if not cur.fetchone():
         cur.execute(
@@ -91,7 +106,7 @@ def register():
 
         cur.execute("SELECT * FROM users WHERE username=%s", (username,))
         if cur.fetchone():
-            flash("Username already exists ❌")
+            flash("Username already exists")
             return redirect("/register")
 
         cur.execute(
@@ -117,14 +132,11 @@ def login():
         user = cur.fetchone()
 
         if not user or not check_password_hash(user["password"], request.form["password"]):
-            flash("Invalid credentials ❌")
+            flash("Invalid credentials")
             return redirect("/login")
 
         session["user_id"] = user["id"]
         session["role"] = user["role"]
-
-        if user["role"] == "admin":
-            return redirect("/admin")
 
         return redirect("/dashboard")
 
@@ -163,12 +175,9 @@ def dashboard():
     return render_template("dashboard.html", data=data, categories=categories)
 
 
-# ================= ADD =================
+# ================= ADD EXPENSE =================
 @app.route("/add", methods=["POST"])
 def add():
-    if "user_id" not in session:
-        return redirect("/login")
-
     db = get_db()
     cur = db.cursor()
 
@@ -190,9 +199,6 @@ def add():
 # ================= DELETE =================
 @app.route("/delete/<int:id>")
 def delete(id):
-    if "user_id" not in session:
-        return redirect("/login")
-
     db = get_db()
     cur = db.cursor()
 
@@ -205,9 +211,6 @@ def delete(id):
 # ================= EDIT =================
 @app.route("/edit/<int:id>", methods=["GET", "POST"])
 def edit(id):
-    if "user_id" not in session:
-        return redirect("/login")
-
     db = get_db()
     cur = db.cursor()
 
@@ -236,30 +239,6 @@ def edit(id):
     return render_template("edit.html", e=e, categories=categories)
 
 
-# ================= ADMIN =================
-@app.route("/admin")
-def admin():
-    if session.get("role") != "admin":
-        return redirect("/login")
-
-    db = get_db()
-    cur = db.cursor()
-
-    cur.execute("SELECT * FROM users")
-    users = cur.fetchall()
-
-    cur.execute("""
-        SELECT u.username, e.amount, c.name as category, e.date, e.description
-        FROM expenses e
-        JOIN users u ON u.id = e.user_id
-        JOIN categories c ON c.id = e.category_id
-        ORDER BY e.id DESC
-    """)
-    expenses = cur.fetchall()
-
-    return render_template("admin.html", users=users, expenses=expenses)
-
-
 # ================= ANALYTICS =================
 @app.route("/analytics")
 def analytics():
@@ -269,7 +248,7 @@ def analytics():
     return render_template("analytics.html")
 
 
-# ================= FIXED CHART API =================
+# ================= CHART DATA (CATEGORY BASED) =================
 @app.route("/chart-data")
 def chart_data():
     if "user_id" not in session:
@@ -278,39 +257,22 @@ def chart_data():
     db = get_db()
     cur = db.cursor()
 
-    filter_type = request.args.get("filter", "month")
+    cur.execute("""
+        SELECT c.name, SUM(e.amount) as total
+        FROM expenses e
+        JOIN categories c ON c.id = e.category_id
+        WHERE e.user_id=%s
+        GROUP BY c.name
+        ORDER BY total DESC
+    """, (session["user_id"],))
 
-    base_query = """
-        SELECT date, SUM(amount)
-        FROM expenses
-        WHERE user_id=%s
-    """
-
-    params = [session["user_id"]]
-
-    if filter_type == "day":
-        base_query += " AND date = CURRENT_DATE::text"
-
-    elif filter_type == "week":
-        base_query += " AND date >= (CURRENT_DATE - INTERVAL '7 days')::date::text"
-
-    elif filter_type == "month":
-        base_query += " AND date >= (CURRENT_DATE - INTERVAL '30 days')::date::text"
-
-    elif filter_type == "year":
-        base_query += " AND date >= (CURRENT_DATE - INTERVAL '365 days')::date::text"
-
-    base_query += " GROUP BY date ORDER BY date"
-
-    cur.execute(base_query, params)
     data = cur.fetchall()
 
     return jsonify({
-        "categories": [row["date"] for row in data],
-        "amounts": [float(row["sum"]) for row in data]
+        "categories": [row["name"] for row in data],
+        "amounts": [float(row["total"]) for row in data]
     })
 
 
-# ================= RUN =================
 if __name__ == "__main__":
     app.run()
