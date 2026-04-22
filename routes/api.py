@@ -10,24 +10,26 @@ def chart():
     if 'user_id' not in session:
         return jsonify({"categories": [], "amounts": []})
 
-    db = get_db()
-    cur = db.cursor()
+    conn = get_db()
+    cur = conn.cursor()
 
     filter_type = request.args.get('filter', 'month')
 
-    # ✅ PostgreSQL FIXED QUERY
-    query = """
-    SELECT c.name, SUM(e.amount)
-    FROM expenses e
-    JOIN categories c ON c.id = e.category_id
-    WHERE e.user_id = %s
-    GROUP BY c.name
-    """
+    # ✅ PostgreSQL query
+    cur.execute("""
+        SELECT c.name AS category, SUM(e.amount) AS total
+        FROM expenses e
+        JOIN categories c ON c.id = e.category_id
+        WHERE e.user_id = %s
+        GROUP BY c.name
+    """, (session['user_id'],))
 
-    cur.execute(query, (session['user_id'],))
     data = cur.fetchall()
 
+    cur.close()
+    conn.close()
+
     return jsonify({
-        "categories": [row[0] for row in data],
-        "amounts": [float(row[1]) for row in data]
+        "categories": [row['category'] for row in data],
+        "amounts": [float(row['total']) for row in data]
     })
