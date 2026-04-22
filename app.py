@@ -10,36 +10,33 @@ from routes.api import api
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "secret123")
 
-# Blueprints
+# ✅ REGISTER BLUEPRINTS
 app.register_blueprint(auth)
 app.register_blueprint(expenses)
 app.register_blueprint(admin)
 app.register_blueprint(api)
 
-# DB INIT (SAFE)
+
+# ✅ INIT DB (SAFE)
 def safe_init_db():
     try:
         with app.app_context():
             init_db()
-        print("DB initialized successfully")
+        print("DB initialized")
     except Exception as e:
-        print("DB init failed:", e)
+        print("DB init error:", e)
+
 
 safe_init_db()
 
-# ROOT ROUTE
+
+# ✅ ROOT ROUTE (IMPORTANT FOR RENDER)
 @app.route("/")
 def home():
-    if "user_id" in session:
-        if session.get("role") == "admin":
-            return redirect("/admin")
-        return redirect("/dashboard")
-    return redirect("/login")
+    return "App Running 🚀"
 
-# HEALTH CHECK
-@app.route("/health")
-def health():
-    return "OK", 200
 
+# ✅ MUST EXIST FOR RENDER
 if __name__ == "__main__":
-    app.run()
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
