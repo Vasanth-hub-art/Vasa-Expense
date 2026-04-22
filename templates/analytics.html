@@ -5,43 +5,94 @@
 
     <h2>📊 Analytics Dashboard</h2>
 
+    <!-- FILTER -->
+    <select id="filter" class="filter">
+        <option value="day">Today</option>
+        <option value="week">Last 7 Days</option>
+        <option value="month" selected>This Month</option>
+        <option value="year">This Year</option>
+    </select>
+
+    <!-- CHART -->
     <div class="chart-container" style="height: 350px;">
         <canvas id="chart"></canvas>
     </div>
 
-    <p id="noData" style="display:none;">No data available</p>
+    <!-- TOTAL -->
+    <p id="totalAmount" style="margin-top:10px; font-weight:bold;"></p>
+
+    <!-- NO DATA -->
+    <p id="noData" style="display:none; color:#94a3b8;">
+        No data available
+    </p>
 
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
+let chartInstance = null;
+
 function loadChart() {
 
-    fetch('/chart-data')
+    const filterValue = document.getElementById('filter').value;
+
+    fetch('/chart-data?filter=' + filterValue)
     .then(res => res.json())
     .then(data => {
 
+        const ctx = document.getElementById('chart').getContext('2d');
+        const noData = document.getElementById('noData');
+        const totalText = document.getElementById('totalAmount');
+
+        // ❌ NO DATA
         if (!data.categories || data.categories.length === 0) {
-            document.getElementById('noData').style.display = "block";
+            if (chartInstance) chartInstance.destroy();
+            noData.style.display = "block";
+            totalText.innerText = "";
             return;
         }
 
-        new Chart(document.getElementById('chart'), {
+        noData.style.display = "none";
+
+        // 💰 TOTAL CALCULATION
+        let total = data.amounts.reduce((a, b) => a + b, 0);
+        totalText.innerText = "Total: ₹ " + total;
+
+        // 🔁 DESTROY OLD CHART
+        if (chartInstance) chartInstance.destroy();
+
+        // 🎯 CREATE CHART
+        chartInstance = new Chart(ctx, {
             type: 'pie',
             data: {
                 labels: data.categories,
                 datasets: [{
-                    data: data.amounts
+                    data: data.amounts,
+                    backgroundColor: [
+                        '#60a5fa','#34d399','#fbbf24',
+                        '#f87171','#a78bfa','#38bdf8',
+                        '#fb7185','#4ade80'
+                    ]
                 }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
             }
         });
 
     })
-    .catch(err => console.log(err));
+    .catch(err => {
+        console.error("Chart Error:", err);
+    });
 }
 
+// INITIAL LOAD
 loadChart();
+
+// FILTER CHANGE
+document.getElementById('filter').addEventListener('change', loadChart);
 </script>
 
 {% endblock %}
