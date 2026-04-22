@@ -7,7 +7,7 @@
     <title>Vasa Expense</title>
 
     <!-- CSS -->
-    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 
 <body>
@@ -15,36 +15,33 @@
     <!-- ================= NAVBAR ================= -->
     <nav class="navbar">
 
-        <!-- LEFT SIDE -->
         <div class="nav-left">
 
-            <!-- ✅ LOGO / APP NAME -->
-            <a href="/" class="logo">💰 Vasa Expense</a>
+            <!-- LOGO -->
+            <a href="{{ url_for('expenses.dashboard') }}" class="logo">
+                💰 Vasa Expense
+            </a>
 
             {% if session.get('user_id') %}
 
                 {% if session.get('role') == 'admin' %}
-                    <!-- ADMIN ONLY -->
-                    <a href="/admin">Admin</a>
+                    <a href="{{ url_for('admin.admin_dashboard') }}">Admin</a>
                 {% else %}
-                    <!-- USER ONLY -->
-                    <a href="/dashboard">Dashboard</a>
-                    <a href="/analytics">Analytics</a>
+                    <a href="{{ url_for('expenses.dashboard') }}">Dashboard</a>
+                    <a href="{{ url_for('expenses.analytics') }}">Analytics</a>
                 {% endif %}
 
             {% else %}
-                <!-- NOT LOGGED IN -->
-                <a href="/login">Login</a>
-                <a href="/register">Register</a>
+                <a href="{{ url_for('auth.login') }}">Login</a>
+                <a href="{{ url_for('auth.register') }}">Register</a>
             {% endif %}
 
         </div>
 
-        <!-- RIGHT SIDE -->
         <div class="nav-right">
 
             {% if session.get('user_id') %}
-                <a href="/logout" class="logout-btn">Logout</a>
+                <a href="{{ url_for('auth.logout') }}" class="logout-btn">Logout</a>
             {% endif %}
 
         </div>
