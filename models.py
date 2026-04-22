@@ -17,9 +17,15 @@ def init_db():
     conn = get_db()
     cur = conn.cursor()
 
+    # ================= STEP 3: RESET OLD BROKEN TABLES =================
+    # (Fixes "column does not exist" errors permanently)
+    cur.execute("DROP TABLE IF EXISTS expenses CASCADE;")
+    cur.execute("DROP TABLE IF EXISTS categories CASCADE;")
+    cur.execute("DROP TABLE IF EXISTS users CASCADE;")
+
     # ================= USERS TABLE =================
     cur.execute("""
-        CREATE TABLE IF NOT EXISTS users (
+        CREATE TABLE users (
             id SERIAL PRIMARY KEY,
             username TEXT UNIQUE,
             password TEXT,
@@ -27,22 +33,9 @@ def init_db():
         )
     """)
 
-    # 🔥 FIX: ensure columns exist (no manual SQL needed)
-    cur.execute("""
-        DO $$
-        BEGIN
-            IF NOT EXISTS (
-                SELECT 1 FROM information_schema.columns
-                WHERE table_name='users' AND column_name='role'
-            ) THEN
-                ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user';
-            END IF;
-        END $$;
-    """)
-
     # ================= CATEGORIES =================
     cur.execute("""
-        CREATE TABLE IF NOT EXISTS categories (
+        CREATE TABLE categories (
             id SERIAL PRIMARY KEY,
             name TEXT UNIQUE,
             type TEXT CHECK(type IN ('income','expense'))
@@ -51,7 +44,7 @@ def init_db():
 
     # ================= EXPENSES =================
     cur.execute("""
-        CREATE TABLE IF NOT EXISTS expenses (
+        CREATE TABLE expenses (
             id SERIAL PRIMARY KEY,
             user_id INTEGER,
             amount REAL,
