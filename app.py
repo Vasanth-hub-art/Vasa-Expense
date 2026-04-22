@@ -21,6 +21,7 @@ def init_db():
     conn = get_db()
     cur = conn.cursor()
 
+    # USERS
     cur.execute("""
     CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
@@ -30,6 +31,7 @@ def init_db():
     )
     """)
 
+    # CATEGORIES
     cur.execute("""
     CREATE TABLE IF NOT EXISTS categories (
         id SERIAL PRIMARY KEY,
@@ -38,6 +40,7 @@ def init_db():
     )
     """)
 
+    # EXPENSES
     cur.execute("""
     CREATE TABLE IF NOT EXISTS expenses (
         id SERIAL PRIMARY KEY,
@@ -49,14 +52,15 @@ def init_db():
     )
     """)
 
-    # default categories
+    # DEFAULT CATEGORIES
     cur.execute("SELECT * FROM categories")
     if not cur.fetchall():
         cur.execute("INSERT INTO categories (name,type) VALUES (%s,%s)", ("Food","expense"))
         cur.execute("INSERT INTO categories (name,type) VALUES (%s,%s)", ("Travel","expense"))
+        cur.execute("INSERT INTO categories (name,type) VALUES (%s,%s)", ("Shopping","expense"))
         cur.execute("INSERT INTO categories (name,type) VALUES (%s,%s)", ("Salary","income"))
 
-    # admin
+    # ADMIN USER
     cur.execute("SELECT * FROM users WHERE username=%s", ("admin",))
     if not cur.fetchone():
         cur.execute(
@@ -69,6 +73,7 @@ def init_db():
     conn.close()
 
 
+# run once
 init_db()
 
 
@@ -147,7 +152,7 @@ def dashboard():
     cur = db.cursor()
 
     cur.execute("""
-        SELECT e.*, c.name as category
+        SELECT e.*, c.name AS category
         FROM expenses e
         JOIN categories c ON e.category_id = c.id
         WHERE e.user_id=%s
@@ -165,18 +170,21 @@ def dashboard():
 # ================= ADD =================
 @app.route("/add", methods=["POST"])
 def add():
+    if "user_id" not in session:
+        return redirect("/login")
+
     db = get_db()
     cur = db.cursor()
 
     cur.execute("""
-        INSERT INTO expenses (user_id,amount,category_id,date,description)
+        INSERT INTO expenses (user_id, amount, category_id, date, description)
         VALUES (%s,%s,%s,%s,%s)
     """, (
         session["user_id"],
-        request.form["amount"],
-        request.form["category_id"],
+        float(request.form["amount"]),
+        int(request.form["category_id"]),
         request.form["date"],
-        request.form["description"]
+        request.form.get("description", "")
     ))
 
     db.commit()
@@ -186,6 +194,9 @@ def add():
 # ================= DELETE =================
 @app.route("/delete/<int:id>")
 def delete(id):
+    if "user_id" not in session:
+        return redirect("/login")
+
     db = get_db()
     cur = db.cursor()
 
@@ -198,6 +209,9 @@ def delete(id):
 # ================= EDIT =================
 @app.route("/edit/<int:id>", methods=["GET", "POST"])
 def edit(id):
+    if "user_id" not in session:
+        return redirect("/login")
+
     db = get_db()
     cur = db.cursor()
 
@@ -207,10 +221,10 @@ def edit(id):
             SET amount=%s, category_id=%s, date=%s, description=%s
             WHERE id=%s
         """, (
-            request.form["amount"],
-            request.form["category_id"],
+            float(request.form["amount"]),
+            int(request.form["category_id"]),
             request.form["date"],
-            request.form["description"],
+            request.form.get("description", ""),
             id
         ))
 
@@ -239,7 +253,7 @@ def admin():
     users = cur.fetchall()
 
     cur.execute("""
-        SELECT u.username, e.amount, c.name as category, e.date, e.description
+        SELECT u.username, e.amount, c.name AS category, e.date, e.description
         FROM expenses e
         JOIN users u ON u.id = e.user_id
         JOIN categories c ON c.id = e.category_id
@@ -257,7 +271,7 @@ def analytics():
     return render_template("analytics.html")
 
 
-# ================= CHART =================
+# ================= CHART DATA (FIXED) =================
 @app.route("/chart-data")
 def chart_data():
     if "user_id" not in session:
@@ -267,7 +281,7 @@ def chart_data():
     cur = db.cursor()
 
     cur.execute("""
-        SELECT c.name, SUM(e.amount)
+        SELECT c.name AS category, SUM(e.amount) AS total
         FROM expenses e
         JOIN categories c ON c.id = e.category_id
         WHERE e.user_id=%s
@@ -277,10 +291,11 @@ def chart_data():
     data = cur.fetchall()
 
     return jsonify({
-        "categories": [row[0] for row in data],
-        "amounts": [float(row[1]) for row in data]
+        "categories": [row["category"] for row in data],
+        "amounts": [float(row["total"]) for row in data]
     })
 
 
+# ================= RUN =================
 if __name__ == "__main__":
-    app.run()
+    app.run(host="0.0.0.0", port=5000)
