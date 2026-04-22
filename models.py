@@ -4,45 +4,30 @@ from psycopg2.extras import RealDictCursor
 from werkzeug.security import generate_password_hash
 
 
-# 🔗 DATABASE CONNECTION
 def get_db():
     db_url = os.environ.get("DATABASE_URL")
 
     if not db_url:
-        raise Exception("DATABASE_URL is not set in environment variables")
+        raise Exception("DATABASE_URL not set")
 
-    conn = psycopg2.connect(db_url, cursor_factory=RealDictCursor)
-    return conn
+    return psycopg2.connect(db_url, cursor_factory=RealDictCursor)
 
 
-# 🏗️ INIT DATABASE (SAFE VERSION)
 def init_db():
     conn = get_db()
     cur = conn.cursor()
 
-    # ================= USERS =================
+    # USERS
     cur.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id SERIAL PRIMARY KEY,
-            username TEXT UNIQUE,
-            password TEXT
+            username TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL,
+            role TEXT DEFAULT 'user'
         )
     """)
 
-    # 👉 ADD ROLE COLUMN SAFELY (FIX YOUR ERROR)
-    cur.execute("""
-        DO $$
-        BEGIN
-            IF NOT EXISTS (
-                SELECT 1 FROM information_schema.columns
-                WHERE table_name='users' AND column_name='role'
-            ) THEN
-                ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user';
-            END IF;
-        END $$;
-    """)
-
-    # ================= CATEGORIES =================
+    # CATEGORIES
     cur.execute("""
         CREATE TABLE IF NOT EXISTS categories (
             id SERIAL PRIMARY KEY,
@@ -51,7 +36,7 @@ def init_db():
         )
     """)
 
-    # ================= EXPENSES =================
+    # EXPENSES
     cur.execute("""
         CREATE TABLE IF NOT EXISTS expenses (
             id SERIAL PRIMARY KEY,
@@ -63,8 +48,8 @@ def init_db():
         )
     """)
 
-    # ================= ADMIN USER =================
-    cur.execute("SELECT * FROM users WHERE username=%s", ("admin",))
+    # ✅ ADMIN USER SAFE INSERT
+    cur.execute("SELECT id FROM users WHERE username=%s", ("admin",))
     if not cur.fetchone():
         cur.execute("""
             INSERT INTO users (username, password, role)
@@ -75,7 +60,7 @@ def init_db():
             "admin"
         ))
 
-    # ================= DEFAULT CATEGORIES =================
+    # DEFAULT CATEGORIES
     cur.executemany("""
         INSERT INTO categories (name, type)
         VALUES (%s, %s)
