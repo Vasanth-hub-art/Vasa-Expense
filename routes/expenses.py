@@ -7,7 +7,6 @@ def login_required():
     return 'user_id' in session
 
 
-# 📊 DASHBOARD
 @expenses.route('/dashboard')
 def dashboard():
     if not login_required():
@@ -17,10 +16,10 @@ def dashboard():
     cur = conn.cursor()
 
     cur.execute("""
-        SELECT e.*, c.name as category
+        SELECT e.*, c.name AS category
         FROM expenses e
         JOIN categories c ON e.category_id = c.id
-        WHERE e.user_id=%s
+        WHERE e.user_id = %s
         ORDER BY e.id DESC
     """, (session['user_id'],))
 
@@ -32,12 +31,9 @@ def dashboard():
     cur.close()
     conn.close()
 
-    return render_template('dashboard.html',
-                           data=data,
-                           categories=categories)
+    return render_template('dashboard.html', data=data, categories=categories)
 
 
-# ➕ ADD
 @expenses.route('/add', methods=['POST'])
 def add():
     if not login_required():
@@ -64,12 +60,8 @@ def add():
     return redirect('/dashboard')
 
 
-# ❌ DELETE
 @expenses.route('/delete/<int:id>')
 def delete(id):
-    if not login_required():
-        return redirect('/')
-
     conn = get_db()
     cur = conn.cursor()
 
@@ -82,12 +74,8 @@ def delete(id):
     return redirect('/dashboard')
 
 
-# ✏️ EDIT
 @expenses.route('/edit/<int:id>', methods=['GET', 'POST'])
 def edit(id):
-    if not login_required():
-        return redirect('/')
-
     conn = get_db()
     cur = conn.cursor()
 
@@ -118,6 +106,4 @@ def edit(id):
     cur.close()
     conn.close()
 
-    return render_template('edit.html',
-                           e=expense,
-                           categories=categories)
+    return render_template('edit.html', e=expense, categories=categories)
