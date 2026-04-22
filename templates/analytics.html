@@ -1,83 +1,47 @@
 {% extends 'base.html' %}
 {% block content %}
 
-<div class="card" style="max-width:700px; margin:auto;">
+<div class="card">
 
-    <h2 style="margin-bottom:15px;">📊 Analytics Dashboard</h2>
+    <h2>📊 Analytics Dashboard</h2>
 
-    <!-- FILTER -->
-    <select id="filter" class="filter" style="margin-bottom:15px;">
-        <option value="day">Day</option>
-        <option value="week">Week</option>
-        <option value="month" selected>Month</option>
-        <option value="year">Year</option>
-    </select>
-
-    <!-- CHART -->
-    <div class="chart-container" style="height:350px;">
+    <div class="chart-container" style="height: 350px;">
         <canvas id="chart"></canvas>
     </div>
 
-    <!-- NO DATA -->
-    <p id="noData" style="display:none; color:#94a3b8; margin-top:10px; text-align:center;">
-        No data available
-    </p>
+    <p id="noData" style="display:none;">No data available</p>
 
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
-let chartInstance = null;
-
 function loadChart() {
 
-    const filterValue = document.getElementById('filter').value;
-
-    fetch('/chart-data?filter=' + filterValue)
+    fetch('/chart-data')
     .then(res => res.json())
     .then(data => {
 
-        const ctx = document.getElementById('chart').getContext('2d');
-        const noDataText = document.getElementById('noData');
-
         if (!data.categories || data.categories.length === 0) {
-            if (chartInstance) chartInstance.destroy();
-            noDataText.style.display = "block";
+            document.getElementById('noData').style.display = "block";
             return;
         }
 
-        noDataText.style.display = "none";
-
-        if (chartInstance) chartInstance.destroy();
-
-        chartInstance = new Chart(ctx, {
+        new Chart(document.getElementById('chart'), {
             type: 'pie',
             data: {
                 labels: data.categories,
                 datasets: [{
-                    data: data.amounts,
-                    backgroundColor: [
-                        '#60a5fa','#34d399','#fbbf24',
-                        '#f87171','#a78bfa','#38bdf8',
-                        '#fb7185','#4ade80'
-                    ]
+                    data: data.amounts
                 }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false
             }
         });
 
     })
-    .catch(() => {
-        document.getElementById('noData').style.display = "block";
-    });
+    .catch(err => console.log(err));
 }
 
 loadChart();
-document.getElementById('filter').addEventListener('change', loadChart);
 </script>
 
 {% endblock %}
