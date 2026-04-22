@@ -2,23 +2,14 @@
 {% block content %}
 
 <div class="home">
-
     <h1>💰 Expense Tracker</h1>
 
-    <p>
-        Track your daily expenses, analyze spending patterns, and improve savings with smart analytics.
-    </p>
+    <p>Track your daily expenses and analyze spending easily.</p>
 
     <div class="home-buttons">
-        <a href="{{ url_for('auth.login') }}">
-            <button>Login</button>
-        </a>
-
-        <a href="{{ url_for('auth.register') }}">
-            <button>Register</button>
-        </a>
+        <a href="{{ url_for('login') }}"><button>Login</button></a>
+        <a href="{{ url_for('register') }}"><button>Register</button></a>
     </div>
-
 </div>
 
 {% endblock %}
