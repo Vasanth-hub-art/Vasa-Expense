@@ -1,12 +1,12 @@
 {% extends 'base.html' %}
 {% block content %}
 
-<div class="card">
+<div class="card" style="max-width:700px; margin:auto;">
 
-    <h2>📊 Analytics Dashboard</h2>
+    <h2 style="margin-bottom:15px;">📊 Analytics Dashboard</h2>
 
     <!-- FILTER -->
-    <select id="filter" class="filter">
+    <select id="filter" class="filter" style="margin-bottom:15px;">
         <option value="day">Day</option>
         <option value="week">Week</option>
         <option value="month" selected>Month</option>
@@ -14,18 +14,17 @@
     </select>
 
     <!-- CHART -->
-    <div class="chart-container" style="height: 350px;">
+    <div class="chart-container" style="height:350px;">
         <canvas id="chart"></canvas>
     </div>
 
     <!-- NO DATA -->
-    <p id="noData" style="display:none; color:#94a3b8; margin-top:10px;">
+    <p id="noData" style="display:none; color:#94a3b8; margin-top:10px; text-align:center;">
         No data available
     </p>
 
 </div>
 
-<!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
@@ -35,20 +34,14 @@ function loadChart() {
 
     const filterValue = document.getElementById('filter').value;
 
-    // ✅ FIXED URL (NO blueprint)
     fetch('/chart-data?filter=' + filterValue)
-    .then(res => {
-        if (!res.ok) throw new Error("Server error");
-        return res.json();
-    })
+    .then(res => res.json())
     .then(data => {
 
-        const canvas = document.getElementById('chart');
-        const ctx = canvas.getContext('2d');
+        const ctx = document.getElementById('chart').getContext('2d');
         const noDataText = document.getElementById('noData');
 
-        // ✅ HANDLE EMPTY DATA
-        if (!data || !data.categories || data.categories.length === 0) {
+        if (!data.categories || data.categories.length === 0) {
             if (chartInstance) chartInstance.destroy();
             noDataText.style.display = "block";
             return;
@@ -56,12 +49,8 @@ function loadChart() {
 
         noDataText.style.display = "none";
 
-        // 🔁 Destroy old chart
-        if (chartInstance) {
-            chartInstance.destroy();
-        }
+        if (chartInstance) chartInstance.destroy();
 
-        // 🎯 Create chart
         chartInstance = new Chart(ctx, {
             type: 'pie',
             data: {
@@ -69,14 +58,9 @@ function loadChart() {
                 datasets: [{
                     data: data.amounts,
                     backgroundColor: [
-                        '#60a5fa',
-                        '#34d399',
-                        '#fbbf24',
-                        '#f87171',
-                        '#a78bfa',
-                        '#38bdf8',
-                        '#fb7185',
-                        '#4ade80'
+                        '#60a5fa','#34d399','#fbbf24',
+                        '#f87171','#a78bfa','#38bdf8',
+                        '#fb7185','#4ade80'
                     ]
                 }]
             },
@@ -87,19 +71,12 @@ function loadChart() {
         });
 
     })
-    .catch(err => {
-        console.error("Chart Error:", err);
-
-        // ✅ FAIL SAFE
-        const noDataText = document.getElementById('noData');
-        noDataText.style.display = "block";
+    .catch(() => {
+        document.getElementById('noData').style.display = "block";
     });
 }
 
-// INITIAL LOAD
 loadChart();
-
-// FILTER CHANGE
 document.getElementById('filter').addEventListener('change', loadChart);
 </script>
 
