@@ -8,7 +8,7 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "secret123")
 
 
-# ================= DB CONNECTION =================
+# ================= DB =================
 def get_db():
     return psycopg2.connect(
         os.environ.get("DATABASE_URL"),
@@ -48,23 +48,6 @@ def init_db():
         description TEXT
     )
     """)
-
-    # Default categories
-    cur.execute("SELECT COUNT(*) FROM categories")
-    if cur.fetchone()["count"] == 0:
-        cur.execute("INSERT INTO categories (name,type) VALUES (%s,%s)", ("Food","expense"))
-        cur.execute("INSERT INTO categories (name,type) VALUES (%s,%s)", ("Travel","expense"))
-        cur.execute("INSERT INTO categories (name,type) VALUES (%s,%s)", ("Rent","expense"))
-        cur.execute("INSERT INTO categories (name,type) VALUES (%s,%s)", ("Shopping","expense"))
-        cur.execute("INSERT INTO categories (name,type) VALUES (%s,%s)", ("Salary","income"))
-
-    # Admin
-    cur.execute("SELECT * FROM users WHERE username=%s", ("admin",))
-    if not cur.fetchone():
-        cur.execute(
-            "INSERT INTO users (username,password,role) VALUES (%s,%s,%s)",
-            ("admin", generate_password_hash("admin123"), "admin")
-        )
 
     conn.commit()
     cur.close()
@@ -124,9 +107,6 @@ def login():
         session["user_id"] = user["id"]
         session["role"] = user["role"]
 
-        if user["role"] == "admin":
-            return redirect("/admin")
-
         return redirect("/dashboard")
 
     return render_template("login.html")
@@ -166,7 +146,7 @@ def dashboard():
                            categories=categories)
 
 
-# ================= ADD EXPENSE =================
+# ================= ADD EXPENSE (FIXED) =================
 @app.route("/add", methods=["POST"])
 def add():
     if "user_id" not in session:
@@ -176,8 +156,8 @@ def add():
     cur = db.cursor()
 
     cur.execute("""
-        INSERT INTO expenses (user_id,amount,category_id,date,description)
-        VALUES (%s,%s,%s,%s,%s)
+        INSERT INTO expenses (user_id, amount, category_id, date, description)
+        VALUES (%s, %s, %s, %s, %s)
     """, (
         session["user_id"],
         request.form["amount"],
@@ -239,31 +219,6 @@ def edit(id):
     return render_template("edit.html", e=e, categories=categories)
 
 
-# ================= ADMIN =================
-@app.route("/admin")
-def admin():
-    if session.get("role") != "admin":
-        return redirect("/login")
-
-    db = get_db()
-    cur = db.cursor()
-
-    cur.execute("SELECT * FROM users")
-    users = cur.fetchall()
-
-    cur.execute("""
-        SELECT u.username, e.amount, c.name as category, e.date, e.description
-        FROM expenses e
-        JOIN users u ON u.id = e.user_id
-        JOIN categories c ON c.id = e.category_id
-    """)
-    expenses = cur.fetchall()
-
-    return render_template("admin.html",
-                           users=users,
-                           expenses=expenses)
-
-
 # ================= ANALYTICS PAGE =================
 @app.route("/analytics")
 def analytics():
@@ -273,7 +228,7 @@ def analytics():
     return render_template("analytics.html")
 
 
-# ================= ANALYTICS API (FIXED FILTER LOGIC) =================
+# ================= ANALYTICS DATA (FIXED) =================
 @app.route("/analytics-data")
 def analytics_data():
     if "user_id" not in session:
@@ -284,39 +239,33 @@ def analytics_data():
 
     filter_type = request.args.get("filter", "month")
 
-    # ================= DATE FILTER LOGIC =================
+    condition = "1=1"
+
     if filter_type == "day":
         condition = "date = CURRENT_DATE"
-
     elif filter_type == "week":
         condition = "date >= CURRENT_DATE - INTERVAL '7 days'"
-
     elif filter_type == "month":
         condition = "date >= CURRENT_DATE - INTERVAL '30 days'"
-
     elif filter_type == "year":
         condition = "date >= CURRENT_DATE - INTERVAL '365 days'"
 
-    else:
-        condition = "1=1"
-
-    # ================= TOTAL EXPENSE =================
+    # TOTAL
     cur.execute(f"""
-        SELECT COALESCE(SUM(amount),0)
+        SELECT COALESCE(SUM(amount),0) as total
         FROM expenses
         WHERE user_id=%s AND {condition}
     """, (session["user_id"],))
 
-    total = cur.fetchone()["coalesce"]
+    total = cur.fetchone()["total"]
 
-    # ================= CATEGORY WISE =================
+    # CATEGORY DATA
     cur.execute(f"""
-        SELECT c.name, SUM(e.amount)
+        SELECT c.name, COALESCE(SUM(e.amount),0) as total
         FROM expenses e
         JOIN categories c ON c.id = e.category_id
         WHERE e.user_id=%s AND {condition}
         GROUP BY c.name
-        ORDER BY SUM(e.amount) DESC
     """, (session["user_id"],))
 
     data = cur.fetchall()
@@ -324,8 +273,29 @@ def analytics_data():
     return jsonify({
         "total": float(total),
         "categories": [r["name"] for r in data],
-        "amounts": [float(r["sum"]) for r in data]
+        "amounts": [float(r["total"]) for r in data]
     })
+
+
+# ================= DEBUG SESSION =================
+@app.route("/check-session")
+def check_session():
+    return jsonify({
+        "user_id": session.get("user_id"),
+        "role": session.get("role")
+    })
+
+
+# ================= DEBUG EXPENSES =================
+@app.route("/debug-expenses")
+def debug_expenses():
+    db = get_db()
+    cur = db.cursor()
+
+    cur.execute("SELECT * FROM expenses")
+    data = cur.fetchall()
+
+    return jsonify(data)
 
 
 # ================= RUN =================
