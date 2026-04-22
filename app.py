@@ -8,7 +8,7 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "secret123")
 
 
-# ================= DB =================
+# ================= DATABASE =================
 def get_db():
     return psycopg2.connect(
         os.environ.get("DATABASE_URL"),
@@ -129,9 +129,9 @@ def dashboard():
     cur = db.cursor()
 
     cur.execute("""
-        SELECT e.*, c.name as category
+        SELECT e.*, c.name AS category
         FROM expenses e
-        JOIN categories c ON e.category_id = c.id
+        JOIN categories c ON c.id = e.category_id
         WHERE e.user_id=%s
         ORDER BY e.id DESC
     """, (session["user_id"],))
@@ -146,7 +146,7 @@ def dashboard():
                            categories=categories)
 
 
-# ================= ADD EXPENSE (FIXED) =================
+# ================= ADD EXPENSE =================
 @app.route("/add", methods=["POST"])
 def add():
     if "user_id" not in session:
@@ -157,7 +157,7 @@ def add():
 
     cur.execute("""
         INSERT INTO expenses (user_id, amount, category_id, date, description)
-        VALUES (%s, %s, %s, %s, %s)
+        VALUES (%s,%s,%s,%s,%s)
     """, (
         session["user_id"],
         request.form["amount"],
@@ -228,7 +228,7 @@ def analytics():
     return render_template("analytics.html")
 
 
-# ================= ANALYTICS DATA (FIXED) =================
+# ================= ANALYTICS DATA (FINAL FIXED) =================
 @app.route("/analytics-data")
 def analytics_data():
     if "user_id" not in session:
@@ -239,63 +239,48 @@ def analytics_data():
 
     filter_type = request.args.get("filter", "month")
 
-    condition = "1=1"
-
+    # ================= SAFE DATE FILTER =================
     if filter_type == "day":
-        condition = "date = CURRENT_DATE"
-    elif filter_type == "week":
-        condition = "date >= CURRENT_DATE - INTERVAL '7 days'"
-    elif filter_type == "month":
-        condition = "date >= CURRENT_DATE - INTERVAL '30 days'"
-    elif filter_type == "year":
-        condition = "date >= CURRENT_DATE - INTERVAL '365 days'"
+        condition = "e.date::date = CURRENT_DATE"
 
-    # TOTAL
+    elif filter_type == "week":
+        condition = "e.date::date >= CURRENT_DATE - INTERVAL '7 days'"
+
+    elif filter_type == "month":
+        condition = "e.date::date >= CURRENT_DATE - INTERVAL '30 days'"
+
+    elif filter_type == "year":
+        condition = "e.date::date >= CURRENT_DATE - INTERVAL '365 days'"
+
+    else:
+        condition = "1=1"
+
+    # ================= TOTAL =================
     cur.execute(f"""
-        SELECT COALESCE(SUM(amount),0) as total
-        FROM expenses
-        WHERE user_id=%s AND {condition}
+        SELECT COALESCE(SUM(e.amount),0) AS total
+        FROM expenses e
+        WHERE e.user_id=%s AND {condition}
     """, (session["user_id"],))
 
     total = cur.fetchone()["total"]
 
-    # CATEGORY DATA
+    # ================= CATEGORY DATA =================
     cur.execute(f"""
-        SELECT c.name, COALESCE(SUM(e.amount),0) as total
+        SELECT c.name, COALESCE(SUM(e.amount),0) AS total
         FROM expenses e
         JOIN categories c ON c.id = e.category_id
         WHERE e.user_id=%s AND {condition}
         GROUP BY c.name
+        ORDER BY total DESC
     """, (session["user_id"],))
 
-    data = cur.fetchall()
+    rows = cur.fetchall()
 
     return jsonify({
         "total": float(total),
-        "categories": [r["name"] for r in data],
-        "amounts": [float(r["total"]) for r in data]
+        "categories": [r["name"] for r in rows],
+        "amounts": [float(r["total"]) for r in rows]
     })
-
-
-# ================= DEBUG SESSION =================
-@app.route("/check-session")
-def check_session():
-    return jsonify({
-        "user_id": session.get("user_id"),
-        "role": session.get("role")
-    })
-
-
-# ================= DEBUG EXPENSES =================
-@app.route("/debug-expenses")
-def debug_expenses():
-    db = get_db()
-    cur = db.cursor()
-
-    cur.execute("SELECT * FROM expenses")
-    data = cur.fetchall()
-
-    return jsonify(data)
 
 
 # ================= RUN =================
