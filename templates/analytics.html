@@ -25,7 +25,7 @@
 
 </div>
 
-<!-- CHART JS -->
+<!-- ✅ Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
@@ -35,15 +35,20 @@ function loadChart() {
 
     const filterValue = document.getElementById('filter').value;
 
-    fetch('/chart-data?filter=' + filterValue)
-    .then(res => res.json())
+    fetch('{{ url_for("api.chart") }}?filter=' + filterValue)
+    .then(res => {
+        if (!res.ok) {
+            throw new Error("Server error");
+        }
+        return res.json();
+    })
     .then(data => {
 
         const canvas = document.getElementById('chart');
         const ctx = canvas.getContext('2d');
         const noDataText = document.getElementById('noData');
 
-        // ❌ No data case
+        // ❌ No data
         if (!data.categories || data.categories.length === 0) {
             if (chartInstance) chartInstance.destroy();
             noDataText.style.display = "block";
@@ -52,12 +57,9 @@ function loadChart() {
 
         noDataText.style.display = "none";
 
-        // 🔁 Destroy old chart
-        if (chartInstance) {
-            chartInstance.destroy();
-        }
+        // 🔁 destroy old chart
+        if (chartInstance) chartInstance.destroy();
 
-        // 🎯 Create chart
         chartInstance = new Chart(ctx, {
             type: 'pie',
             data: {
@@ -65,16 +67,10 @@ function loadChart() {
                 datasets: [{
                     data: data.amounts,
                     backgroundColor: [
-                        '#60a5fa',
-                        '#34d399',
-                        '#fbbf24',
-                        '#f87171',
-                        '#a78bfa',
-                        '#38bdf8',
-                        '#fb7185',
-                        '#4ade80'
-                    ],
-                    borderWidth: 1
+                        '#60a5fa','#34d399','#fbbf24',
+                        '#f87171','#a78bfa','#38bdf8',
+                        '#fb7185','#4ade80'
+                    ]
                 }]
             },
             options: {
@@ -85,14 +81,14 @@ function loadChart() {
 
     })
     .catch(err => {
-        console.log("Chart Error:", err);
+        console.error("Chart Error:", err);
     });
 }
 
-// INITIAL LOAD
+// load first
 loadChart();
 
-// FILTER CHANGE EVENT
+// change filter
 document.getElementById('filter').addEventListener('change', loadChart);
 </script>
 
