@@ -1,95 +1,30 @@
 {% extends 'base.html' %}
 {% block content %}
 
-<div class="card">
+<h2>Analytics</h2>
 
-    <h2>📊 Analytics Dashboard</h2>
+<select id="filter">
+    <option value="month">Month</option>
+</select>
 
-    <!-- FILTER -->
-    <select id="filter" class="filter">
-        <option value="day">Day</option>
-        <option value="week">Week</option>
-        <option value="month" selected>Month</option>
-        <option value="year">Year</option>
-    </select>
+<canvas id="chart"></canvas>
 
-    <!-- CHART -->
-    <div class="chart-container" style="height: 350px;">
-        <canvas id="chart"></canvas>
-    </div>
-
-    <!-- NO DATA -->
-    <p id="noData" style="display:none; color:#94a3b8; margin-top:10px;">
-        No data available
-    </p>
-
-</div>
-
-<!-- ✅ Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
-let chartInstance = null;
-
-function loadChart() {
-
-    const filterValue = document.getElementById('filter').value;
-
-    fetch('{{ url_for("api.chart") }}?filter=' + filterValue)
-    .then(res => {
-        if (!res.ok) {
-            throw new Error("Server error");
+fetch("{{ url_for('chart') }}")
+.then(res => res.json())
+.then(data => {
+    new Chart(document.getElementById('chart'), {
+        type: 'pie',
+        data: {
+            labels: data.categories,
+            datasets: [{
+                data: data.amounts
+            }]
         }
-        return res.json();
-    })
-    .then(data => {
-
-        const canvas = document.getElementById('chart');
-        const ctx = canvas.getContext('2d');
-        const noDataText = document.getElementById('noData');
-
-        // ❌ No data
-        if (!data.categories || data.categories.length === 0) {
-            if (chartInstance) chartInstance.destroy();
-            noDataText.style.display = "block";
-            return;
-        }
-
-        noDataText.style.display = "none";
-
-        // 🔁 destroy old chart
-        if (chartInstance) chartInstance.destroy();
-
-        chartInstance = new Chart(ctx, {
-            type: 'pie',
-            data: {
-                labels: data.categories,
-                datasets: [{
-                    data: data.amounts,
-                    backgroundColor: [
-                        '#60a5fa','#34d399','#fbbf24',
-                        '#f87171','#a78bfa','#38bdf8',
-                        '#fb7185','#4ade80'
-                    ]
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false
-            }
-        });
-
-    })
-    .catch(err => {
-        console.error("Chart Error:", err);
     });
-}
-
-// load first
-loadChart();
-
-// change filter
-document.getElementById('filter').addEventListener('change', loadChart);
+});
 </script>
 
 {% endblock %}
