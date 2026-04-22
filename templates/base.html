@@ -12,7 +12,7 @@
 
 <body>
 
-    <!-- ================= NAVBAR ================= -->
+    <!-- NAVBAR -->
     <nav class="navbar">
 
         <div class="nav-left">
@@ -28,7 +28,10 @@
                     <a href="{{ url_for('admin.admin_dashboard') }}">Admin</a>
                 {% else %}
                     <a href="{{ url_for('expenses.dashboard') }}">Dashboard</a>
-                    <a href="{{ url_for('expenses.analytics') }}">Analytics</a>
+
+                    <!-- ✅ FIX HERE -->
+                    <a href="{{ url_for('auth.analytics') }}">Analytics</a>
+
                 {% endif %}
 
             {% else %}
@@ -48,7 +51,7 @@
 
     </nav>
 
-    <!-- ================= CONTENT ================= -->
+    <!-- CONTENT -->
     <div class="container">
         {% block content %}{% endblock %}
     </div>
