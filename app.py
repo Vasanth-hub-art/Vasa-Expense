@@ -10,27 +10,31 @@ from routes.api import api
 app = Flask(__name__)
 app.secret_key = "secret123"
 
-
-# ================= BLUEPRINT REGISTRATION =================
+# BLUEPRINTS
 app.register_blueprint(auth)
 app.register_blueprint(expenses)
 app.register_blueprint(admin)
 app.register_blueprint(api)
 
 
-# ================= SAFE DB INIT =================
-def safe_init_db():
+# SAFE DB INIT (DON'T CRASH APP)
+def safe_init():
     try:
         with app.app_context():
             init_db()
-        print("DB initialized successfully")
+        print("DB initialized")
     except Exception as e:
-        print("DB init skipped/failed:", e)
+        print("DB error:", e)
 
 
-safe_init_db()
+safe_init()
 
 
-# ================= RENDER ENTRY POINT =================
+@app.route("/")
+def home():
+    return "Vasa Expense App Running 🚀"
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+    
