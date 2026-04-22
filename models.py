@@ -8,7 +8,7 @@ def get_db():
     db_url = os.environ.get("DATABASE_URL")
 
     if not db_url:
-        raise Exception("DATABASE_URL not set")
+        raise Exception("DATABASE_URL is not set")
 
     return psycopg2.connect(db_url, cursor_factory=RealDictCursor)
 
@@ -17,17 +17,30 @@ def init_db():
     conn = get_db()
     cur = conn.cursor()
 
-    # USERS
+    # ================= USERS TABLE =================
     cur.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id SERIAL PRIMARY KEY,
-            username TEXT UNIQUE NOT NULL,
-            password TEXT NOT NULL,
+            username TEXT UNIQUE,
+            password TEXT,
             role TEXT DEFAULT 'user'
         )
     """)
 
-    # CATEGORIES
+    # 🔥 FIX: ensure columns exist (no manual SQL needed)
+    cur.execute("""
+        DO $$
+        BEGIN
+            IF NOT EXISTS (
+                SELECT 1 FROM information_schema.columns
+                WHERE table_name='users' AND column_name='role'
+            ) THEN
+                ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user';
+            END IF;
+        END $$;
+    """)
+
+    # ================= CATEGORIES =================
     cur.execute("""
         CREATE TABLE IF NOT EXISTS categories (
             id SERIAL PRIMARY KEY,
@@ -36,7 +49,7 @@ def init_db():
         )
     """)
 
-    # EXPENSES
+    # ================= EXPENSES =================
     cur.execute("""
         CREATE TABLE IF NOT EXISTS expenses (
             id SERIAL PRIMARY KEY,
@@ -48,8 +61,8 @@ def init_db():
         )
     """)
 
-    # ✅ ADMIN USER SAFE INSERT
-    cur.execute("SELECT id FROM users WHERE username=%s", ("admin",))
+    # ================= ADMIN USER =================
+    cur.execute("SELECT * FROM users WHERE username=%s", ("admin",))
     if not cur.fetchone():
         cur.execute("""
             INSERT INTO users (username, password, role)
@@ -59,20 +72,6 @@ def init_db():
             generate_password_hash("admin123"),
             "admin"
         ))
-
-    # DEFAULT CATEGORIES
-    cur.executemany("""
-        INSERT INTO categories (name, type)
-        VALUES (%s, %s)
-        ON CONFLICT (name) DO NOTHING
-    """, [
-        ("Food", "expense"),
-        ("Travel", "expense"),
-        ("Shopping", "expense"),
-        ("Bills", "expense"),
-        ("Salary", "income"),
-        ("Freelance", "income")
-    ])
 
     conn.commit()
     cur.close()
