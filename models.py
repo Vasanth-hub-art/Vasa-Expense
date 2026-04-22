@@ -17,13 +17,12 @@ def init_db():
     conn = get_db()
     cur = conn.cursor()
 
-    # ================= STEP 3: RESET OLD BROKEN TABLES =================
-    # (Fixes "column does not exist" errors permanently)
+    # ⚠️ RESET TABLES (ONLY FIRST DEPLOY)
     cur.execute("DROP TABLE IF EXISTS expenses CASCADE;")
     cur.execute("DROP TABLE IF EXISTS categories CASCADE;")
     cur.execute("DROP TABLE IF EXISTS users CASCADE;")
 
-    # ================= USERS TABLE =================
+    # USERS
     cur.execute("""
         CREATE TABLE users (
             id SERIAL PRIMARY KEY,
@@ -33,7 +32,7 @@ def init_db():
         )
     """)
 
-    # ================= CATEGORIES =================
+    # CATEGORIES
     cur.execute("""
         CREATE TABLE categories (
             id SERIAL PRIMARY KEY,
@@ -42,7 +41,7 @@ def init_db():
         )
     """)
 
-    # ================= EXPENSES =================
+    # EXPENSES
     cur.execute("""
         CREATE TABLE expenses (
             id SERIAL PRIMARY KEY,
@@ -54,7 +53,7 @@ def init_db():
         )
     """)
 
-    # ================= ADMIN USER =================
+    # ADMIN USER
     cur.execute("SELECT * FROM users WHERE username=%s", ("admin",))
     if not cur.fetchone():
         cur.execute("""
@@ -65,6 +64,20 @@ def init_db():
             generate_password_hash("admin123"),
             "admin"
         ))
+
+    # DEFAULT CATEGORIES
+    cur.executemany("""
+        INSERT INTO categories (name, type)
+        VALUES (%s, %s)
+        ON CONFLICT (name) DO NOTHING
+    """, [
+        ("Food", "expense"),
+        ("Travel", "expense"),
+        ("Shopping", "expense"),
+        ("Bills", "expense"),
+        ("Salary", "income"),
+        ("Freelance", "income")
+    ])
 
     conn.commit()
     cur.close()
