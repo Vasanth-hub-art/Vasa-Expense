@@ -3,46 +3,25 @@
 
 <div class="card">
 
-    <h2>✏️ Edit Expense</h2>
+    <h2>Edit Expense</h2>
 
     <form method="POST">
 
-        <input
-            name="amount"
-            type="number"
-            step="0.01"
-            value="{{ e.amount }}"
-            required
-        >
+        <input name="amount" value="{{ e.amount }}" required>
 
-        <!-- CATEGORY DROPDOWN -->
-        <select name="category_id" required>
-
-            {% if categories %}
-                {% for c in categories %}
-                    <option value="{{ c.id }}"
-                        {% if c.id == e.category_id %}selected{% endif %}>
-                        {{ c.name }}
-                    </option>
-                {% endfor %}
-            {% endif %}
-
+        <select name="category_id">
+            {% for c in categories %}
+                <option value="{{ c.id }}"
+                    {% if c.id == e.category_id %}selected{% endif %}>
+                    {{ c.name }}
+                </option>
+            {% endfor %}
         </select>
 
-        <input
-            name="date"
-            type="date"
-            value="{{ e.date }}"
-            required
-        >
+        <input name="date" value="{{ e.date }}" required>
+        <input name="description" value="{{ e.description }}">
 
-        <input
-            name="description"
-            value="{{ e.description or '' }}"
-            placeholder="Description"
-        >
-
-        <button type="submit">Update</button>
+        <button>Update</button>
 
     </form>
 
