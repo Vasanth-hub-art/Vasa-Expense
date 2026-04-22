@@ -228,7 +228,7 @@ def analytics():
     return render_template("analytics.html")
 
 
-# ================= ANALYTICS DATA (FINAL FIXED) =================
+# ================= ANALYTICS DATA (FIXED & CLEAN) =================
 @app.route("/analytics-data")
 def analytics_data():
     if "user_id" not in session:
@@ -239,23 +239,18 @@ def analytics_data():
 
     filter_type = request.args.get("filter", "month")
 
-    # ================= SAFE DATE FILTER =================
     if filter_type == "day":
         condition = "e.date::date = CURRENT_DATE"
-
     elif filter_type == "week":
         condition = "e.date::date >= CURRENT_DATE - INTERVAL '7 days'"
-
     elif filter_type == "month":
         condition = "e.date::date >= CURRENT_DATE - INTERVAL '30 days'"
-
     elif filter_type == "year":
         condition = "e.date::date >= CURRENT_DATE - INTERVAL '365 days'"
-
     else:
         condition = "1=1"
 
-    # ================= TOTAL =================
+    # TOTAL EXPENSE
     cur.execute(f"""
         SELECT COALESCE(SUM(e.amount),0) AS total
         FROM expenses e
@@ -264,7 +259,7 @@ def analytics_data():
 
     total = cur.fetchone()["total"]
 
-    # ================= CATEGORY DATA =================
+    # CATEGORY DATA
     cur.execute(f"""
         SELECT c.name, COALESCE(SUM(e.amount),0) AS total
         FROM expenses e
