@@ -1,95 +1,44 @@
+from flask import Flask
 import os
-import psycopg2
-from psycopg2.extras import RealDictCursor
-from werkzeug.security import generate_password_hash
+
+from models import init_db
+from routes.auth import auth
+from routes.expenses import expenses
+from routes.admin import admin
+from routes.api import api
+
+app = Flask(__name__)
+app.secret_key = "secret123"
 
 
-# 🔗 DATABASE CONNECTION
-def get_db():
-    db_url = os.environ.get("DATABASE_URL")
-
-    if not db_url:
-        raise Exception("DATABASE_URL is not set in environment variables")
-
-    conn = psycopg2.connect(
-        db_url,
-        cursor_factory=RealDictCursor
-    )
-    return conn
+# ================= BLUEPRINT REGISTRATION =================
+app.register_blueprint(auth)
+app.register_blueprint(expenses)
+app.register_blueprint(admin)
+app.register_blueprint(api)
 
 
-# 🏗️ INITIALIZE DATABASE
-def init_db():
-    conn = get_db()
-    cur = conn.cursor()
+# ================= SAFE DB INIT (NON-BLOCKING) =================
+def safe_init_db():
+    try:
+        with app.app_context():
+            init_db()
+        print("DB initialized successfully")
+    except Exception as e:
+        # IMPORTANT: do NOT crash app if DB fails
+        print("DB init skipped/failed:", e)
 
-    # ================= USERS =================
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS users (
-            id SERIAL PRIMARY KEY,
-            username TEXT UNIQUE,
-            password TEXT,
-            role TEXT DEFAULT 'user'
-        )
-    """)
 
-    # 🔥 SAFE MIGRATION (prevents crash on old DB)
-    cur.execute("""
-        ALTER TABLE users
-        ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'user';
-    """)
+# Run safely (but does not break deployment)
+safe_init_db()
 
-    # ================= CATEGORIES =================
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS categories (
-            id SERIAL PRIMARY KEY,
-            name TEXT UNIQUE,
-            type TEXT CHECK(type IN ('income','expense'))
-        )
-    """)
 
-    # ================= EXPENSES =================
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS expenses (
-            id SERIAL PRIMARY KEY,
-            user_id INTEGER,
-            amount REAL,
-            category_id INTEGER,
-            date TEXT,
-            description TEXT
-        )
-    """)
+# ================= HOME ROUTE (IMPORTANT FOR RENDER TEST) =================
+@app.route("/")
+def home():
+    return "Vasa Expense App is Running 🚀"
 
-    # ================= ADMIN USER =================
-    cur.execute(
-        "SELECT * FROM users WHERE username=%s",
-        ("admin",)
-    )
 
-    if not cur.fetchone():
-        cur.execute("""
-            INSERT INTO users (username, password, role)
-            VALUES (%s, %s, %s)
-        """, (
-            "admin",
-            generate_password_hash("admin123"),
-            "admin"
-        ))
-
-    # ================= DEFAULT CATEGORIES =================
-    cur.executemany("""
-        INSERT INTO categories (name, type)
-        VALUES (%s, %s)
-        ON CONFLICT (name) DO NOTHING
-    """, [
-        ("Food", "expense"),
-        ("Travel", "expense"),
-        ("Shopping", "expense"),
-        ("Bills", "expense"),
-        ("Salary", "income"),
-        ("Freelance", "income")
-    ])
-
-    conn.commit()
-    cur.close()
-    conn.close()
+# ================= RENDER ENTRY POINT =================
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
