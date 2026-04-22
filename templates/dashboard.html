@@ -5,64 +5,43 @@
 
     <h2>💰 Dashboard</h2>
 
-    <!-- ➕ ADD EXPENSE FORM -->
-    <form method="POST" action="/add">
-
+    <form method="POST" action="{{ url_for('add') }}">
         <input name="amount" type="number" step="0.01" placeholder="Amount" required>
 
-        <!-- CATEGORY DROPDOWN -->
         <select name="category_id" required>
             <option value="">Select Category</option>
-
-            {% if categories %}
-                {% for c in categories %}
-                    <option value="{{ c.id }}">
-                        {{ c.name }} ({{ c.type }})
-                    </option>
-                {% endfor %}
-            {% endif %}
-
+            {% for c in categories %}
+                <option value="{{ c.id }}">{{ c.name }}</option>
+            {% endfor %}
         </select>
 
         <input name="date" type="date" required>
-
         <input name="description" placeholder="Description">
 
-        <button type="submit">Add Expense</button>
+        <button>Add</button>
     </form>
 
 </div>
 
-<!-- 📊 TABLE -->
 <table>
+<tr>
+    <th>Amount</th>
+    <th>Category</th>
+    <th>Date</th>
+    <th>Action</th>
+</tr>
 
-    <tr>
-        <th>Amount</th>
-        <th>Category</th>
-        <th>Date</th>
-        <th>Action</th>
-    </tr>
-
-    {% if data and data|length > 0 %}
-
-        {% for e in data %}
-        <tr>
-            <td data-label="Amount">{{ e.amount }}</td>
-            <td data-label="Category">{{ e.category }}</td>
-            <td data-label="Date">{{ e.date }}</td>
-
-            <td data-label="Action">
-                <a href="/edit/{{ e.id }}">Edit</a> |
-                <a href="/delete/{{ e.id }}">Delete</a>
-            </td>
-        </tr>
-        {% endfor %}
-
-    {% else %}
-        <tr>
-            <td colspan="4">No expenses found</td>
-        </tr>
-    {% endif %}
+{% for e in data %}
+<tr>
+    <td>{{ e.amount }}</td>
+    <td>{{ e.category }}</td>
+    <td>{{ e.date }}</td>
+    <td>
+        <a href="{{ url_for('edit', id=e.id) }}">Edit</a> |
+        <a href="{{ url_for('delete', id=e.id) }}">Delete</a>
+    </td>
+</tr>
+{% endfor %}
 
 </table>
 
