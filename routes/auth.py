@@ -16,27 +16,26 @@ def home():
 def login():
     if request.method == 'POST':
         db = get_db()
+        cur = db.cursor()
 
-        user = db.execute(
-            "SELECT * FROM users WHERE username=?",
+        cur.execute(
+            "SELECT * FROM users WHERE username=%s",
             (request.form['username'],)
-        ).fetchone()
+        )
 
-        # ❌ INVALID USER
+        user = cur.fetchone()
+
         if not user:
             flash("Invalid username ❌")
             return redirect(url_for('auth.login'))
 
-        # ❌ WRONG PASSWORD
         if not check_password_hash(user['password'], request.form['password']):
             flash("Invalid password ❌")
             return redirect(url_for('auth.login'))
 
-        # ✅ LOGIN SUCCESS
         session['user_id'] = user['id']
         session['role'] = user['role']
 
-        # 👉 ADMIN → ADMIN PAGE
         if user['role'] == 'admin':
             return redirect('/admin')
 
@@ -50,24 +49,27 @@ def login():
 def register():
     if request.method == 'POST':
         db = get_db()
+        cur = db.cursor()
 
         username = request.form['username']
-        password = request.form['password']
+        password = generate_password_hash(request.form['password'])
 
-        # ❗ CHECK EXISTING USER
-        existing = db.execute(
-            "SELECT * FROM users WHERE username=?",
+        cur.execute(
+            "SELECT * FROM users WHERE username=%s",
             (username,)
-        ).fetchone()
+        )
+
+        existing = cur.fetchone()
 
         if existing:
             flash("Username already exists ⚠️")
             return redirect(url_for('auth.register'))
 
-        db.execute(
-            "INSERT INTO users(username,password,role) VALUES(?,?,?)",
-            (username, generate_password_hash(password), "user")
+        cur.execute(
+            "INSERT INTO users (username, password, role) VALUES (%s, %s, %s)",
+            (username, password, "user")
         )
+
         db.commit()
 
         flash("Registration successful ✅ Please login")
@@ -83,36 +85,38 @@ def logout():
     return redirect('/')
 
 
-# ---------------- ANALYTICS PAGE ----------------
+# ---------------- ANALYTICS ----------------
 @auth.route('/analytics')
 def analytics():
     if 'user_id' not in session:
         return redirect('/login')
 
-    # ❌ ADMIN SHOULD NOT SEE ANALYTICS
     if session.get('role') == 'admin':
         return redirect('/admin')
 
     return render_template('analytics.html')
 
 
-# ---------------- CHART DATA API ----------------
+# ---------------- CHART DATA ----------------
 @auth.route('/chart-data')
 def chart_data():
     if 'user_id' not in session:
         return jsonify({"categories": [], "amounts": []})
 
     db = get_db()
+    cur = db.cursor()
 
-    data = db.execute("""
-        SELECT c.name, SUM(e.amount) as total
+    cur.execute("""
+        SELECT c.name, SUM(e.amount)
         FROM expenses e
         JOIN categories c ON c.id = e.category_id
-        WHERE e.user_id=?
+        WHERE e.user_id=%s
         GROUP BY c.name
-    """, (session['user_id'],)).fetchall()
+    """, (session['user_id'],))
+
+    data = cur.fetchall()
 
     return jsonify({
-        "categories": [row['name'] for row in data],
-        "amounts": [row['total'] for row in data]
+        "categories": [row[0] for row in data],
+        "amounts": [float(row[1]) for row in data]
     })
