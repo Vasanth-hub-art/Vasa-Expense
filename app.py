@@ -8,7 +8,7 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "secret123")
 
 
-# ================= DATABASE =================
+# ================= DB CONNECTION =================
 def get_db():
     return psycopg2.connect(
         os.environ.get("DATABASE_URL"),
@@ -44,21 +44,21 @@ def init_db():
         user_id INTEGER,
         amount REAL,
         category_id INTEGER,
-        date TEXT,
+        date DATE,
         description TEXT
     )
     """)
 
-    # default categories (safe insert)
+    # Default categories
     cur.execute("SELECT COUNT(*) FROM categories")
     if cur.fetchone()["count"] == 0:
         cur.execute("INSERT INTO categories (name,type) VALUES (%s,%s)", ("Food","expense"))
         cur.execute("INSERT INTO categories (name,type) VALUES (%s,%s)", ("Travel","expense"))
         cur.execute("INSERT INTO categories (name,type) VALUES (%s,%s)", ("Rent","expense"))
-        cur.execute("INSERT INTO categories (name,type) VALUES (%s,%s)", ("Salary","income"))
         cur.execute("INSERT INTO categories (name,type) VALUES (%s,%s)", ("Shopping","expense"))
+        cur.execute("INSERT INTO categories (name,type) VALUES (%s,%s)", ("Salary","income"))
 
-    # admin user
+    # Admin
     cur.execute("SELECT * FROM users WHERE username=%s", ("admin",))
     if not cur.fetchone():
         cur.execute(
@@ -273,7 +273,7 @@ def analytics():
     return render_template("analytics.html")
 
 
-# ================= ANALYTICS API =================
+# ================= ANALYTICS API (FIXED FILTER LOGIC) =================
 @app.route("/analytics-data")
 def analytics_data():
     if "user_id" not in session:
@@ -282,20 +282,39 @@ def analytics_data():
     db = get_db()
     cur = db.cursor()
 
-    # TOTAL EXPENSE
-    cur.execute("""
+    filter_type = request.args.get("filter", "month")
+
+    # ================= DATE FILTER LOGIC =================
+    if filter_type == "day":
+        condition = "date = CURRENT_DATE"
+
+    elif filter_type == "week":
+        condition = "date >= CURRENT_DATE - INTERVAL '7 days'"
+
+    elif filter_type == "month":
+        condition = "date >= CURRENT_DATE - INTERVAL '30 days'"
+
+    elif filter_type == "year":
+        condition = "date >= CURRENT_DATE - INTERVAL '365 days'"
+
+    else:
+        condition = "1=1"
+
+    # ================= TOTAL EXPENSE =================
+    cur.execute(f"""
         SELECT COALESCE(SUM(amount),0)
         FROM expenses
-        WHERE user_id=%s
+        WHERE user_id=%s AND {condition}
     """, (session["user_id"],))
+
     total = cur.fetchone()["coalesce"]
 
-    # CATEGORY WISE DATA
-    cur.execute("""
+    # ================= CATEGORY WISE =================
+    cur.execute(f"""
         SELECT c.name, SUM(e.amount)
         FROM expenses e
         JOIN categories c ON c.id = e.category_id
-        WHERE e.user_id=%s
+        WHERE e.user_id=%s AND {condition}
         GROUP BY c.name
         ORDER BY SUM(e.amount) DESC
     """, (session["user_id"],))
@@ -304,8 +323,8 @@ def analytics_data():
 
     return jsonify({
         "total": float(total),
-        "categories": [row["name"] for row in data],
-        "amounts": [float(row["sum"]) for row in data]
+        "categories": [r["name"] for r in data],
+        "amounts": [float(r["sum"]) for r in data]
     })
 
 
