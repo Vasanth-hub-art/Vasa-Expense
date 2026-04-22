@@ -5,68 +5,76 @@
 
     <h2>📊 Expense Analytics</h2>
 
-    <div style="height: 350px;">
-        <canvas id="chart"></canvas>
+    <!-- 💰 TOTAL -->
+    <div style="margin-bottom:15px; font-size:18px;">
+        💰 Total Expense: ₹ <span id="total">0</span>
     </div>
 
-    <p id="noData" style="display:none; color:#94a3b8;">
-        No expenses found
-    </p>
+    <!-- FILTER -->
+    <select id="filter" class="filter">
+        <option value="day">Day</option>
+        <option value="week">Week</option>
+        <option value="month" selected>Month</option>
+        <option value="year">Year</option>
+    </select>
+
+    <!-- CHART -->
+    <div style="height:350px;">
+        <canvas id="chart"></canvas>
+    </div>
 
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
-
 let chartInstance = null;
 
 function loadChart() {
 
-    fetch("/chart-data")
-        .then(res => res.json())
-        .then(data => {
+    const filter = document.getElementById("filter").value;
 
-            const labels = data.categories;
-            const values = data.amounts;
+    fetch("/analytics-data?filter=" + filter)
+    .then(res => res.json())
+    .then(data => {
 
-            if (!values || values.length === 0) {
-                document.getElementById("noData").style.display = "block";
-                return;
+        // 💰 total update
+        document.getElementById("total").innerText = data.total;
+
+        const ctx = document.getElementById("chart").getContext("2d");
+
+        if (chartInstance) chartInstance.destroy();
+
+        chartInstance = new Chart(ctx, {
+            type: "doughnut",
+            data: {
+                labels: data.categories,
+                datasets: [{
+                    data: data.amounts,
+                    backgroundColor: [
+                        "#60a5fa",
+                        "#34d399",
+                        "#fbbf24",
+                        "#f87171",
+                        "#a78bfa",
+                        "#38bdf8"
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
             }
+        });
 
-            document.getElementById("noData").style.display = "none";
-
-            if (chartInstance) chartInstance.destroy();
-
-            chartInstance = new Chart(document.getElementById("chart"), {
-                type: "doughnut",
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        data: values,
-                        backgroundColor: [
-                            "#60a5fa",
-                            "#34d399",
-                            "#fbbf24",
-                            "#f87171",
-                            "#a78bfa",
-                            "#38bdf8"
-                        ]
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false
-                }
-            });
-
-        })
-        .catch(err => console.log(err));
+    });
 }
 
+// load initially
 loadChart();
 
+// filter change
+document.getElementById("filter").addEventListener("change", loadChart);
 </script>
 
 {% endblock %}
