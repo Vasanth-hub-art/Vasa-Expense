@@ -10,14 +10,15 @@ from routes.api import api
 app = Flask(__name__)
 app.secret_key = "secret123"
 
-# BLUEPRINTS
+
+# ================= BLUEPRINTS =================
 app.register_blueprint(auth)
 app.register_blueprint(expenses)
 app.register_blueprint(admin)
 app.register_blueprint(api)
 
 
-# SAFE DB INIT (DON'T CRASH APP)
+# ================= SAFE INIT =================
 def safe_init():
     try:
         with app.app_context():
@@ -32,9 +33,9 @@ safe_init()
 
 @app.route("/")
 def home():
-    return "Vasa Expense App Running 🚀"
+    return "Vasa Expense Running 🚀"
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
-    
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
