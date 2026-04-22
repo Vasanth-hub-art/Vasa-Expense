@@ -1,11 +1,11 @@
-={% extends 'base.html' %}
+{% extends 'base.html' %}
 {% block content %}
 
 <div class="card">
 
     <h2>📊 Analytics Dashboard</h2>
 
-    <!-- Filter -->
+    <!-- FILTER -->
     <select id="filter" class="filter">
         <option value="day">Day</option>
         <option value="week">Week</option>
@@ -13,33 +13,37 @@
         <option value="year">Year</option>
     </select>
 
-    <!-- Chart -->
-    <div class="chart-container">
+    <!-- CHART -->
+    <div class="chart-container" style="height: 350px;">
         <canvas id="chart"></canvas>
     </div>
 
-    <!-- No Data Message -->
+    <!-- NO DATA -->
     <p id="noData" style="display:none; color:#94a3b8; margin-top:10px;">
         No data available
     </p>
 
 </div>
 
+<!-- CHART JS -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
 let chartInstance = null;
 
-function loadChart(){
+function loadChart() {
 
-    fetch('/chart-data?filter=' + document.getElementById('filter').value)
+    const filterValue = document.getElementById('filter').value;
+
+    fetch('/chart-data?filter=' + filterValue)
     .then(res => res.json())
     .then(data => {
 
-        const ctx = document.getElementById('chart');
+        const canvas = document.getElementById('chart');
+        const ctx = canvas.getContext('2d');
         const noDataText = document.getElementById('noData');
 
-        // ❌ If no data
+        // ❌ No data case
         if (!data.categories || data.categories.length === 0) {
             if (chartInstance) chartInstance.destroy();
             noDataText.style.display = "block";
@@ -59,7 +63,18 @@ function loadChart(){
             data: {
                 labels: data.categories,
                 datasets: [{
-                    data: data.amounts
+                    data: data.amounts,
+                    backgroundColor: [
+                        '#60a5fa',
+                        '#34d399',
+                        '#fbbf24',
+                        '#f87171',
+                        '#a78bfa',
+                        '#38bdf8',
+                        '#fb7185',
+                        '#4ade80'
+                    ],
+                    borderWidth: 1
                 }]
             },
             options: {
@@ -74,11 +89,11 @@ function loadChart(){
     });
 }
 
-// Load initially
+// INITIAL LOAD
 loadChart();
 
-// Reload on filter change
-document.getElementById('filter').onchange = loadChart;
+// FILTER CHANGE EVENT
+document.getElementById('filter').addEventListener('change', loadChart);
 </script>
 
 {% endblock %}
