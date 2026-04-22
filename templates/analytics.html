@@ -37,7 +37,7 @@ function loadChart() {
 
     const filterValue = document.getElementById('filter').value;
 
-    fetch('/chart-data?filter=' + filterValue)
+    fetch("{{ url_for('chart_data') }}?filter=" + filterValue)
     .then(res => res.json())
     .then(data => {
 
