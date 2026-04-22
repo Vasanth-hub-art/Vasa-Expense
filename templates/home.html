@@ -10,8 +10,13 @@
     </p>
 
     <div class="home-buttons">
-        <a href="/login"><button>Login</button></a>
-        <a href="/register"><button>Register</button></a>
+        <a href="{{ url_for('auth.login') }}">
+            <button>Login</button>
+        </a>
+
+        <a href="{{ url_for('auth.register') }}">
+            <button>Register</button>
+        </a>
     </div>
 
 </div>
