@@ -87,3 +87,15 @@ def init_db():
     conn.commit()
     cur.close()
     conn.close()
+
+    cur.execute("""
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name='users' AND column_name='role'
+    ) THEN
+        ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user';
+    END IF;
+END $$;
+""")
