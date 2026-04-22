@@ -1,15 +1,27 @@
 {% extends 'base.html' %}
 {% block content %}
 
-<div class="home">
-    <h1>💰 Expense Tracker</h1>
+<div class="home" style="text-align:center; padding:40px 20px;">
 
-    <p>Track your daily expenses and analyze spending easily.</p>
+    <h1 style="margin-bottom:10px;">💰 Expense Tracker</h1>
 
-    <div class="home-buttons">
-        <a href="{{ url_for('login') }}"><button>Login</button></a>
-        <a href="{{ url_for('register') }}"><button>Register</button></a>
+    <p style="color:#94a3b8; max-width:500px; margin:auto;">
+        Track your daily expenses, analyze spending patterns,
+        and improve savings with smart analytics.
+    </p>
+
+    <div class="home-buttons" style="margin-top:25px;">
+
+        <a href="/login">
+            <button style="margin-right:10px;">Login</button>
+        </a>
+
+        <a href="/register">
+            <button>Register</button>
+        </a>
+
     </div>
+
 </div>
 
 {% endblock %}
