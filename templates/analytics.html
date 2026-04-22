@@ -5,76 +5,100 @@
 
     <h2>📊 Expense Analytics</h2>
 
-    <!-- 💰 TOTAL -->
-    <div style="margin-bottom:15px; font-size:18px;">
-        💰 Total Expense: ₹ <span id="total">0</span>
+    <!-- TOTAL -->
+    <div style="margin:10px 0; font-size:18px;">
+        💰 Total Expense: <b id="total">0</b>
     </div>
 
     <!-- FILTER -->
     <select id="filter" class="filter">
-        <option value="day">Day</option>
-        <option value="week">Week</option>
-        <option value="month" selected>Month</option>
-        <option value="year">Year</option>
+        <option value="day">Today</option>
+        <option value="week">Last 7 Days</option>
+        <option value="month" selected>Last 30 Days</option>
+        <option value="year">Last 1 Year</option>
     </select>
 
     <!-- CHART -->
-    <div style="height:350px;">
+    <div style="height: 380px; margin-top:20px;">
         <canvas id="chart"></canvas>
     </div>
 
+    <!-- NO DATA -->
+    <p id="noData" style="display:none; color:#94a3b8; margin-top:10px;">
+        No expense data available
+    </p>
+
 </div>
 
+<!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
+
 let chartInstance = null;
 
-function loadChart() {
+async function loadChart() {
 
-    const filter = document.getElementById("filter").value;
+    const filterValue = document.getElementById("filter").value;
 
-    fetch("/analytics-data?filter=" + filter)
-    .then(res => res.json())
-    .then(data => {
+    const res = await fetch("/analytics-data?filter=" + filterValue);
+    const data = await res.json();
 
-        // 💰 total update
-        document.getElementById("total").innerText = data.total;
+    // TOTAL
+    document.getElementById("total").innerText = "₹ " + data.total;
 
-        const ctx = document.getElementById("chart").getContext("2d");
+    const noData = document.getElementById("noData");
+
+    // NO DATA CASE
+    if (!data.categories || data.categories.length === 0) {
 
         if (chartInstance) chartInstance.destroy();
 
-        chartInstance = new Chart(ctx, {
-            type: "doughnut",
-            data: {
-                labels: data.categories,
-                datasets: [{
-                    data: data.amounts,
-                    backgroundColor: [
-                        "#60a5fa",
-                        "#34d399",
-                        "#fbbf24",
-                        "#f87171",
-                        "#a78bfa",
-                        "#38bdf8"
-                    ]
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false
-            }
-        });
+        noData.style.display = "block";
+        return;
+    }
 
+    noData.style.display = "none";
+
+    const ctx = document.getElementById("chart").getContext("2d");
+
+    // destroy old chart
+    if (chartInstance) {
+        chartInstance.destroy();
+    }
+
+    // BAR CHART (BEST FOR EXPENSE ANALYTICS)
+    chartInstance = new Chart(ctx, {
+        type: "bar",
+        data: {
+            labels: data.categories,
+            datasets: [{
+                label: "Expenses (₹)",
+                data: data.amounts,
+                backgroundColor: "#60a5fa"
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
     });
 }
 
-// load initially
+// initial load
 loadChart();
 
 // filter change
 document.getElementById("filter").addEventListener("change", loadChart);
+
 </script>
 
 {% endblock %}
