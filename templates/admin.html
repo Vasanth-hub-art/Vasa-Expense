@@ -8,7 +8,7 @@
     <!-- ================= USERS ================= -->
     <h3>👤 Users</h3>
 
-    {% if users %}
+    {% if users and users|length > 0 %}
     <table>
         <tr>
             <th>ID</th>
@@ -17,8 +17,8 @@
 
         {% for u in users %}
         <tr>
-            <td>{{ u['id'] }}</td>
-            <td>{{ u['username'] }}</td>
+            <td>{{ u.id }}</td>
+            <td>{{ u.username }}</td>
         </tr>
         {% endfor %}
     </table>
@@ -30,7 +30,7 @@
     <!-- ================= EXPENSES ================= -->
     <h3>💰 Expense History</h3>
 
-    {% if expenses %}
+    {% if expenses and expenses|length > 0 %}
     <table>
         <tr>
             <th>User</th>
@@ -42,12 +42,12 @@
 
         {% for e in expenses %}
         <tr>
-            <td data-label="User">{{ e['username'] }}</td>
-            <td data-label="Amount">₹ {{ e['amount'] }}</td>
-            <td data-label="Category">{{ e['category'] }}</td>
-            <td data-label="Date">{{ e['date'] }}</td>
+            <td data-label="User">{{ e.username }}</td>
+            <td data-label="Amount">₹ {{ e.amount }}</td>
+            <td data-label="Category">{{ e.category }}</td>
+            <td data-label="Date">{{ e.date }}</td>
             <td data-label="Description">
-                {{ e['description'] if e['description'] else '-' }}
+                {{ e.description or '-' }}
             </td>
         </tr>
         {% endfor %}
