@@ -3,6 +3,7 @@ from models import get_db
 
 expenses = Blueprint('expenses', __name__)
 
+
 # 🔐 LOGIN CHECK
 def login_required():
     return 'user_id' in session
@@ -14,19 +15,26 @@ def dashboard():
     if not login_required():
         return redirect('/')
 
-    db = get_db()
+    conn = get_db()
+    cur = conn.cursor()
 
-    # ✅ JOIN WITH CATEGORY TABLE
-    data = db.execute("""
+    # ✅ JOIN WITH CATEGORY
+    cur.execute("""
         SELECT e.*, c.name as category
         FROM expenses e
         JOIN categories c ON e.category_id = c.id
-        WHERE e.user_id=?
+        WHERE e.user_id=%s
         ORDER BY e.id DESC
-    """, (session['user_id'],)).fetchall()
+    """, (session['user_id'],))
 
-    # ✅ FETCH CATEGORIES FOR DROPDOWN
-    categories = db.execute("SELECT * FROM categories").fetchall()
+    data = cur.fetchall()
+
+    # ✅ FETCH CATEGORIES
+    cur.execute("SELECT * FROM categories")
+    categories = cur.fetchall()
+
+    cur.close()
+    conn.close()
 
     return render_template('dashboard.html',
                            data=data,
@@ -39,20 +47,24 @@ def add():
     if not login_required():
         return redirect('/')
 
-    db = get_db()
+    conn = get_db()
+    cur = conn.cursor()
 
-    db.execute("""
+    cur.execute("""
         INSERT INTO expenses(user_id, amount, category_id, date, description)
-        VALUES (?, ?, ?, ?, ?)
+        VALUES (%s, %s, %s, %s, %s)
     """, (
         session['user_id'],
         request.form['amount'],
-        request.form['category_id'],   # ✅ FIXED
+        request.form['category_id'],
         request.form['date'],
         request.form['description']
     ))
 
-    db.commit()
+    conn.commit()
+    cur.close()
+    conn.close()
+
     return redirect('/dashboard')
 
 
@@ -62,40 +74,57 @@ def delete(id):
     if not login_required():
         return redirect('/')
 
-    db = get_db()
-    db.execute("DELETE FROM expenses WHERE id=?", (id,))
-    db.commit()
+    conn = get_db()
+    cur = conn.cursor()
+
+    cur.execute("DELETE FROM expenses WHERE id=%s", (id,))
+
+    conn.commit()
+    cur.close()
+    conn.close()
+
     return redirect('/dashboard')
 
 
 # ✏️ EDIT
-@expenses.route('/edit/<int:id>', methods=['GET','POST'])
+@expenses.route('/edit/<int:id>', methods=['GET', 'POST'])
 def edit(id):
     if not login_required():
         return redirect('/')
 
-    db = get_db()
+    conn = get_db()
+    cur = conn.cursor()
 
     if request.method == 'POST':
-        db.execute("""
+        cur.execute("""
             UPDATE expenses
-            SET amount=?, category_id=?, date=?, description=?
-            WHERE id=?
+            SET amount=%s, category_id=%s, date=%s, description=%s
+            WHERE id=%s
         """, (
             request.form['amount'],
-            request.form['category_id'],   # ✅ FIXED
+            request.form['category_id'],
             request.form['date'],
             request.form['description'],
             id
         ))
 
-        db.commit()
+        conn.commit()
+        cur.close()
+        conn.close()
+
         return redirect('/dashboard')
 
-    # GET DATA + CATEGORIES
-    expense = db.execute("SELECT * FROM expenses WHERE id=?", (id,)).fetchone()
-    categories = db.execute("SELECT * FROM categories").fetchall()
+    # GET DATA
+    cur.execute("SELECT * FROM expenses WHERE id=%s", (id,))
+    expense = cur.fetchone()
+
+    cur.execute("SELECT * FROM categories")
+    categories = cur.fetchall()
+
+    cur.close()
+    conn.close()
 
     return render_template('edit.html',
                            e=expense,
                            categories=categories)
+    
