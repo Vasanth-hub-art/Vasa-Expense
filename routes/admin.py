@@ -1,7 +1,9 @@
 from flask import Blueprint, render_template, session, redirect, url_for
 from models import get_db
+from psycopg2.extras import RealDictCursor
 
 admin = Blueprint('admin', __name__)
+
 
 @admin.route('/admin')
 def admin_dashboard():
@@ -14,13 +16,15 @@ def admin_dashboard():
     if session.get('role') != 'admin':
         return redirect(url_for('auth.login'))
 
-    db = get_db()
+    conn = get_db()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
 
     # 👤 USERS
-    users = db.execute("SELECT * FROM users").fetchall()
+    cur.execute("SELECT * FROM users")
+    users = cur.fetchall()
 
-    # 💰 EXPENSES WITH CATEGORY
-    expenses = db.execute("""
+    # 💰 EXPENSES WITH JOIN
+    cur.execute("""
         SELECT u.username,
                e.amount,
                c.name AS category,
@@ -30,8 +34,14 @@ def admin_dashboard():
         JOIN users u ON u.id = e.user_id
         JOIN categories c ON c.id = e.category_id
         ORDER BY e.id DESC
-    """).fetchall()
+    """)
+    expenses = cur.fetchall()
 
-    return render_template("admin.html",
-                           users=users,
-                           expenses=expenses)
+    cur.close()
+    conn.close()
+
+    return render_template(
+        "admin.html",
+        users=users,
+        expenses=expenses
+    )
